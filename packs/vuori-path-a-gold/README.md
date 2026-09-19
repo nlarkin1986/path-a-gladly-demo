@@ -15,3 +15,7 @@
 | `scrape/` | Firecrawl artifacts |
 
 Soft-close honesty: `softClose: true` — no Added / Pay / ATC success UI.
+
+**Hosted (temporary Vercel, ~60m):** https://temporary-sonic-scarlet-9np5nvy.vercel.app/demo.html?pack=vuori-path-a-gold
+
+**Also on GitHub Pages:** https://nlarkin1986.github.io/path-a-gladly-demo/demo.html?pack=vuori-path-a-gold
