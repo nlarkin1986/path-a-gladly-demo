@@ -1,0 +1,65 @@
+{
+  "method": "POST https://api.firecrawl.dev/v2/scrape",
+  "formats": [
+    "markdown",
+    {
+      "type": "screenshot",
+      "fullPage": true
+    },
+    {
+      "type": "images"
+    },
+    {
+      "type": "product"
+    }
+  ],
+  "url": "https://www.huckberry.com/store/flint-and-tinder/category/p/1001044-flannel-sateen-fatigue-pant",
+  "success": true,
+  "title": "Flint and Tinder Brushed Sateen Fatigue Pant - HB Athletic Straight - British Khaki | Chino Pants | Huckberry",
+  "price": {
+    "amount": 128,
+    "currency": "USD",
+    "formatted": "$128.00"
+  },
+  "promo": "Free U.S. Shipping $98+ | Free U.S. Returns | Unreal Customer Service",
+  "ogImage": "https://huckberry.imgix.net/spree/products/822812/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_01_Product_on_White.jpg?auto=compress%2Cformat&cs=tinysrgb&fit=max&w=700",
+  "product": {
+    "title": "Brushed Sateen Fatigue Pant - HB Athletic Straight",
+    "brand": "Flint and Tinder",
+    "url": "https://huckberry.com/store/flint-and-tinder/category/p/1001044-flannel-sateen-fatigue-pant",
+    "description": "Built for the field, refined for daily wear, and brushed for exceptional softness When Flint and Tinder design director Nick Kemp set out to create the Flannel Sateen Fatigue Pant, he went straight to the U.S. Army archives for \u201840s-era uniforms to reference. With his blueprint set, he sourced a rare brushed sateen cotton with 1% stretch for added movement\u2014an exceptionally soft take on the fabric the U.S. Army adopted for comfort and durability in the field. It\u2019s a nod to the uniforms that helped define Americana style, updated for a modern wardrobe and built to only get better with age.",
+    "variants": [
+      {
+        "price": {
+          "amount": 128,
+          "currency": "USD",
+          "formatted": "$128.00"
+        },
+        "availability": {
+          "inStock": true,
+          "text": "In stock"
+        }
+      }
+    ]
+  },
+  "imageCountTotal": 39,
+  "fatigueProductImageUrls": [
+    "https://huckberry.imgix.net/spree/products/822812/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_01_Product_on_White.jpg?auto=format%2C%20compress&crop=top&fit=fill&cs=tinysrgb&ar=1%3A1&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822817/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_06_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822816/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_05_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822818/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_07_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822814/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_02_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822813/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_03_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1",
+    "https://huckberry.imgix.net/spree/products/822815/original/1001044_Flint_and_Tinder_Flannel_Sateen_Fatigue_Pant_British_Khaki_04_Detail.jpg?auto=format%2C%20compress&crop=faces&fit=crop&cs=tinysrgb&trim=auto&ar=4%3A5&trim-color=ffffff&trim-md=5&ixlib=react-9.8.1"
+  ],
+  "screenshotUrl": "https://storage.googleapis.com/firecrawl-scrape-media/screenshot-748d0e52-3a10-43d3-a9ec-14048ad1f681.png?GoogleAccessId=scrape-bucket-accessor%40firecrawl.iam.gserviceaccount.com&Expires=1790379556&Signature=ZySXvZRAltBfVburlSK1T0kOStJnatnUlqNzU4jclh8zltlxqxIx354uexBwWKEDvby4OeZq%2FEjU2D9uCnKaNjXHnn5DWwvidBGa8FanytLTT4qe3pQULWR0JUBquuw1rKNTcSXFzhoB9VR7CgfdQF58NBEzYmyVpzHi9C8N1WmJLL5VDD6R9IKFxMmHparDcPfzso5RZAaP02lihRBl3abRlpnXCaG1mS3u0VqW4NbF7BQ6aWn79DQsz3EjhMhvhwLlUsVGfO6GS9nvqM4%2F9Edq1ZGRS%2FsrEWdpZzCv6hqrqJUyOwJ2R9CvOefcX2Bq2FsF%2FD7Ec9cqlM%2BNMbl8Rg%3D%3D",
+  "metadata": {
+    "title": "Flint and Tinder Brushed Sateen Fatigue Pant - HB Athletic Straight - British Khaki | Chino Pants | Huckberry",
+    "description": "Built for the field, refined for daily wear, and brushed for exceptional softness",
+    "og:price:amount": "$128.00",
+    "og:price:currency": "USD",
+    "og:availability": "instock",
+    "statusCode": 200,
+    "sourceURL": "https://www.huckberry.com/store/flint-and-tinder/category/p/1001044-flannel-sateen-fatigue-pant"
+  }
+}

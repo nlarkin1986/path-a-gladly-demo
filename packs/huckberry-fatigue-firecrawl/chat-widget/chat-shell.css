@@ -1,0 +1,221 @@
+/* ==============================================================
+   Gladly Chat SDK v2 — chat-shell.css
+   The widget container (WidgetContainer) in its three modes:
+   desktop panel, desktop fullscreen, and mobile full-bleed —
+   plus the host plumbing, open/close animations, and the
+   prefers-reduced-motion guards.
+
+   Source of truth:
+   1. sagansystems/chat-sdk, web-v2/src/ (extracted 2026-08-12) —
+      WidgetContainer + its CSS module, the shadow-root host inline
+      styles.
+   2. docs/plans/2026-08-12-001-chat-sdk-v2-design-spec.md §2, §4
+      (WidgetContainer), §8 (shell behavior), §9 (a11y).
+
+   Requires chat-tokens.css (loaded first) for the .cw-host scope.
+   Changes nothing in design-system/tokens.css or components.css.
+
+   Markup shape:
+     <div class="cw-host cw-is-fixed-host" data-accent="green">
+       <div class="cw-container cw-is-panel" role="dialog" aria-modal="true">
+         <div class="cw-focus-sentinel" tabindex="0"></div>
+         … header / body / footer …
+         <div class="cw-focus-sentinel" tabindex="0"></div>
+       </div>
+     </div>
+   ============================================================== */
+
+/* ================================================================
+   HOST PLUMBING — spec §2 / §8
+   Production sets these inline on div#gladlyChat_container:
+     position: fixed !important;
+     z-index: <config appearance.zIndex, default 2147483000> !important;
+     display: block !important;
+   Opt in with .cw-is-fixed-host so the shell can also be embedded
+   in a demo frame (see .cw-stage) without escaping to the viewport.
+   ================================================================ */
+.cw-host.cw-is-fixed-host {
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  pointer-events: none;   /* the container's children re-enable */
+}
+
+/* ================================================================
+   WIDGET CONTAINER — base (spec §4)
+   role="dialog" aria-modal, focus sentinels at both ends, Escape
+   minimizes. The base box is mode-agnostic; width/horizontal
+   placement come from the panel / fullscreen modifiers.
+   ================================================================ */
+.cw-container {
+  position: fixed;
+  bottom: 0;
+  height: calc(100dvh - 24px);
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  pointer-events: none;                       /* children re-enable, per source */
+  box-shadow: 0 1px 30px 0 rgba(0, 0, 0, 0.2);
+  transition: bottom 0.3s ease, height 0.3s ease, top 0.3s ease;
+
+  /* Layout scaffolding for header / body / footer. Not an extracted
+     value — the source composes these as flex children; recorded
+     here so the chrome unit has a column to sit in. */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Every direct child takes pointer events back. */
+.cw-container > * {
+  pointer-events: auto;
+}
+
+/* Focus containment sentinels (spec §9) — zero-size tabbable divs
+   that wrap the dialog contents. */
+.cw-focus-sentinel {
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  outline: none;
+  flex: 0 0 auto;
+}
+
+/* ================================================================
+   MODE — PANEL (desktop default)
+   width: 500px; right: 24px  (left: 24px when left-aligned)
+   ================================================================ */
+.cw-container.cw-is-panel {
+  width: 500px;
+  right: 24px;
+  left: auto;
+  transform: none;
+}
+
+/* Alignment LEFT mirrors launcher + panel (spec §8). */
+.cw-container.cw-is-panel.cw-align-left {
+  left: 24px;
+  right: auto;
+}
+
+/* ================================================================
+   MODE — FULLSCREEN (desktop)
+   width: calc(100vw - 48px); max-width: 1280px; centered.
+   Body scroll is locked while open — apply .cw-scroll-locked to
+   <body> (the source does this from JS).
+   ================================================================ */
+.cw-container.cw-is-fullscreen {
+  width: calc(100vw - 48px);
+  max-width: 1280px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.cw-scroll-locked {
+  overflow: hidden;
+}
+
+/* ================================================================
+   MODE — MOBILE full-bleed
+   THE UNIVERSAL BREAKPOINT (spec §4): max-width 500px OR landscape
+   with max-height 500px. Every mobile rule in this library uses
+   this exact pair — do not narrow it to width alone.
+
+   height: calc(100dvh + 100lvh) with padding-bottom: 100lvh is the
+   source's keyboard overshoot: the extra 100lvh of box sits below
+   the visible viewport so the on-screen keyboard can rise into it
+   without the composer being pushed off-screen.
+   ================================================================ */
+@media (max-width: 500px), (orientation: landscape) and (max-height: 500px) {
+  .cw-container,
+  .cw-container.cw-is-panel,
+  .cw-container.cw-is-fullscreen {
+    width: 100%;
+    max-width: none;
+    left: 0;
+    right: 0;
+    /* TOP-anchored, not bottom-anchored — load-bearing.
+       The box is two viewport-heights tall with one of them as bottom
+       padding: the content box is the visible 100dvh and the background
+       runs a full screen below it, so opening the keyboard (which shifts
+       the visual viewport up and drags this layout-anchored panel with it)
+       never lets the page show through behind the keyboard.
+       That only works anchored to the TOP. Anchoring to the bottom instead
+       puts the content box one full viewport ABOVE the screen. `bottom` is
+       deliberately released to auto so top + height win the over-constraint,
+       matching the source module, which sets top/left/right and never bottom. */
+    top: 0;
+    bottom: auto;
+    transform: translateZ(0);  /* source: promotes to its own layer */
+    border-radius: 0;
+    height: calc(100dvh + 100lvh);
+    padding-bottom: 100lvh;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Mobile is a static full-bleed box — nothing to ease. The bottom/height
+     transition belongs to desktop, where obstacle offsets shift them. */
+  .cw-container {
+    transition: none;
+  }
+
+  /* Open / close animations are mobile-only (spec §4, §8):
+     open  → mobileSlideUp   0.35s ease-out           (translateY 100% → 0)
+     close → mobileSlideDown 0.35s ease-out forwards  (→ translateY(100dvh)),
+             with a 400ms JS fallback timer in the source. */
+  .cw-container.cw-is-opening {
+    animation: cw-mobileSlideUp 0.35s ease-out;
+  }
+
+  .cw-container.cw-is-closing {
+    animation: cw-mobileSlideDown 0.35s ease-out forwards;
+  }
+}
+
+/* Source keyframe names are mobileSlideUp / mobileSlideDown; prefixed
+   here because @keyframes names are document-global. */
+@keyframes cw-mobileSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes cw-mobileSlideDown {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100dvh); }
+}
+
+/* ================================================================
+   REDUCED MOTION — spec §9
+   prefers-reduced-motion: reduce kills the mobile slide up/down
+   outright (the source sets animation: none, it does not shorten
+   it) and the shell's positional transitions with it.
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .cw-container {
+    transition: none;
+  }
+
+  .cw-container.cw-is-opening,
+  .cw-container.cw-is-closing {
+    animation: none;
+  }
+}
+
+/* ================================================================
+   DEMO HELPER — not in source
+   .cw-stage turns any block into a containing frame so the shell
+   can be shown inline on the showcase page instead of pinned to
+   the viewport. Purely presentational scaffolding.
+   ================================================================ */
+.cw-stage {
+  position: relative;
+  overflow: hidden;
+}
+
+.cw-stage .cw-container {
+  position: absolute;
+  height: calc(100% - 24px);
+}

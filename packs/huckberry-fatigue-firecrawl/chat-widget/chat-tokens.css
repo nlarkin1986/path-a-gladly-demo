@@ -1,0 +1,288 @@
+/* ==============================================================
+   Gladly Chat SDK v2 — chat-tokens.css
+   Widget theme variables, radius enum, on-page launcher vars, and
+   the statically precomputed derived-color sets for the two stock
+   accents.
+
+   Source of truth:
+   1. sagansystems/chat-sdk, web-v2/src/ (extracted 2026-08-12) —
+      ThemeVars.tsx (the variable table + defaults), theme.ts (the
+      on-page launcher shadow root), lib/colorUtils.ts (the
+      readableColor / readableIconColor / accentGradientStops
+      derivations), global.css (the box-sizing reset).
+   2. docs/plans/2026-08-12-001-chat-sdk-v2-design-spec.md §1, §2,
+      §3, §9 — the persisted extraction, which is the authority for
+      every value below.
+
+   SCOPE — read before editing (plan KTD2):
+   This file is a SEPARATE token scope from design-system/tokens.css.
+   It imports nothing from it and must never be merged into it. The
+   widget is a customer-themable surface whose defaults collide with
+   the agent-desktop palette on purpose-identical names
+   (--color-brand-primary / --color-brand-secondary exist in BOTH
+   with different values). Every declaration here is therefore
+   scoped under .cw-host — never :root — so both stylesheets can
+   load on one page with zero interference.
+
+   NAMING (plan KTD5): every class carries a cw- prefix. The
+   theme-variable names below intentionally keep the SOURCE names
+   (--color-chat-launcher, --font-primary, …) because component CSS
+   in this folder reads them exactly as the production modules do;
+   the .cw-host scope is what keeps them from leaking.
+   ============================================================== */
+
+/* ================================================================
+   HOST RESET — global.css + theme.ts :host
+   Source global.css is only:
+     *, *::before, *::after { box-sizing: border-box; }
+   injected into an open shadow root, so it is naturally scoped.
+   With no shadow root here, .cw-host is the scoping stand-in.
+   The launcher's `all: initial` host reset is deliberately NOT
+   reproduced — it would blank out inherited demo-page styling with
+   no shadow boundary to contain it.
+   ================================================================ */
+.cw-host {
+  box-sizing: border-box;
+  display: block;               /* :host { display: block } */
+}
+
+.cw-host *,
+.cw-host *::before,
+.cw-host *::after {
+  box-sizing: border-box;
+}
+
+.cw-host {
+
+  /* ================================================================
+     WIDGET THEME VARIABLES — ThemeVars.tsx (spec §1, defaults column)
+     Emitted in production as an inline style on a wrapper div. Every
+     row below is customer-themable unless marked Derived.
+     ================================================================ */
+
+  /* --border-radius is DELIBERATELY UNSET by default. Production
+     omits it entirely when the org has not picked a radius, so every
+     module reads it as var(--border-radius, <per-component fallback>).
+     Set it via [data-radius] below to exercise the enum. */
+
+  --color-alert:                    #FE1A20;  /* error / notification dot. NOTE the two reds
+                                                 (spec §3): #FE1A20 is the VARIABLE default;
+                                                 #d4240d is the CSS-module fallback and belongs
+                                                 only in var(--color-alert, #d4240d) position —
+                                                 unread dots, --payment-alert-color, payment
+                                                 status declined/error text. */
+  --color-attachment-background:    #312E2E;  /* attachment surfaces */
+  --color-brand-primary:            #f3f3f3;  /* agent bubble fill (legacy skin) */
+  --color-brand-secondary:          #F3F3F3;  /* user message bubble background */
+  --color-chat-launcher:            #009B00;  /* accent: send button, quick-reply border,
+                                                 scroll-btn hover, payment brand, file link */
+  --color-chat-launcher-fill:       #009B00;  /* Derived — same as launcher, emitted ONLY when a
+                                                 WCAG foreground can be derived for it */
+  --color-chat-launcher-icon:       #ffffff;  /* Derived — readableIconColor(); see ACCENTS below */
+  --color-chat-launcher-text:       #000000;  /* Derived — readableColor(); BLACK on both stock
+                                                 accents. Never white — see ACCENTS below. */
+  --color-greeting-close-button:    #000000;  /* greeting close button */
+  --color-header-background:        #009B00;  /* header bar fill + 1px bottom border */
+  --color-product-image-background: #ffffff;  /* product card image well */
+
+  --font-primary:   'Helvetica Neue', Helvetica, sans-serif;  /* header title / subtitle */
+  --font-secondary: 'Helvetica Neue', Helvetica, sans-serif;  /* body + UI text everywhere else */
+  /* No font loading exists in the source (KTD7). These are plain CSS
+     stacks; the widget inherits host-page fonts by design. */
+
+  --link-color: #1a0dab;  /* message-text links (module fallback value).
+                             PrivacyDisclaimer locally overrides to #484848. */
+
+  /* ================================================================
+     RADIUS ENUM — ThemeVars.tsx radius enum, as usable values
+     NONE / SMALL / LARGE / XL / XXL. Applied to --border-radius by
+     the [data-radius] blocks below; also available directly for
+     components that want a named step.
+     ================================================================ */
+  --cw-radius-none:  0px;
+  --cw-radius-small: 8px;
+  --cw-radius-large: 16px;
+  --cw-radius-xl:    24px;
+  --cw-radius-xxl:   32px;
+
+  /* ================================================================
+     ON-PAGE LAUNCHER VARIABLES — theme.ts (separate shadow root)
+     DELIBERATE DEFAULT SPLIT (spec §1): the widget's own accent is
+     green #009B00, while the on-page launcher ships purple #8C69F0.
+     This is not a mistake and must not be "harmonised".
+     ================================================================ */
+  --gl-accent: #8C69F0;                                   /* launcher accent (purple) */
+  --gl-font:   'Helvetica Neue', Helvetica, sans-serif;   /* launcher font stack */
+  --gl-radius: 24px;                                      /* launcher surface radius */
+  --gl-focus-ring: #8C69F0;                               /* accent only when it clears 3:1 on
+                                                             white, else unset so rules fall back
+                                                             to currentColor. #8C69F0 = 3.89:1 →
+                                                             it qualifies. */
+
+  /* ================================================================
+     ACCESSIBILITY CONSTANTS — spec §9 (WCAG 2.2 AA)
+     Universal focus ring; the three documented exceptions carry
+     their own values at the component that owns them.
+     ================================================================ */
+  --cw-focus-ring-color:   #005fcc;  /* universal */
+  --cw-focus-ring-width:   2px;
+  --cw-focus-ring-offset:  2px;
+  --cw-focus-ring-payment: #81b5ea;  /* exception: payment card */
+  --cw-min-target:         24px;     /* dismiss buttons enforce min-width/height */
+
+  /* ================================================================
+     RUNTIME-INLINE CONSTANTS — spec §10
+     Set from TS constants as inline style in production, not CSS.
+     Reproduced here so the static components can read them.
+     ================================================================ */
+  --wallet-slot-height: 50px;      /* WALLET_SLOT_HEIGHT_PX */
+  --portal-radius:      16px;      /* SecurePaymentForm card radius */
+  --portal-brand:       #8C69F0;   /* SecurePaymentForm brand fill */
+}
+
+/* ================================================================
+   RADIUS ENUM APPLICATION
+   Opt in with data-radius="none|small|large|xl|xxl" on .cw-host.
+   Omit the attribute to reproduce production's unset default, where
+   each module falls back to its own hardcoded radius.
+   ================================================================ */
+.cw-host[data-radius="none"]  { --border-radius: 0px;  }
+.cw-host[data-radius="small"] { --border-radius: 8px;  }
+.cw-host[data-radius="large"] { --border-radius: 16px; }
+.cw-host[data-radius="xl"]    { --border-radius: 24px; }
+.cw-host[data-radius="xxl"]   { --border-radius: 32px; }
+
+/* ================================================================
+   ACCENTS — precomputed derived colors (plan KTD3)
+   ----------------------------------------------------------------
+   The source derives these in JS at runtime (lib/colorUtils.ts).
+   A static rebuild must hardcode them, so each block carries the
+   formula it was computed from.
+
+     readableColor(bg)     → luminance(bg) > 0.179 ? '#000' : '#fff'
+                             (the 4.5:1 body-text rule)
+     readableIconColor(bg) → contrast(white, bg) >= 3 ? '#fff' : '#000'
+                             (the 3:1 non-text / icon rule)
+     accentGradientStops(a) → linear-gradient(135deg,
+                                rgba(lighten(a, 30%), 0.6),
+                                rgba(darken(a,  20%), 0.8),
+                                rgba(a,               0.7))
+     lighten(c, p) = c + (255 - c) * p     (interpolate toward 255)
+     darken(c, p)  = c * (1 - p)           (interpolate toward 0)
+
+   BOTH stock accents land on the SAME pair: black text, white icons.
+   They clear the 3:1 icon rule against white but FAIL the 4.5:1 text
+   rule — which is precisely why the text foreground flips to black.
+   Writing white as the TEXT color here is a known, already-corrected
+   error; do not reintroduce it.
+
+   Switch with data-accent="green" | "purple" on .cw-host (or any
+   descendant, to theme one region). The attribute is an explicit
+   override: with no attribute, the deliberate green-widget /
+   purple-launcher default split above stands.
+   ================================================================ */
+
+/* --- Green #009B00 — the widget's stock accent -------------------
+   luminance      ≈ 0.234  > 0.179          → text  #000
+   contrast(white)  3.69:1 ≥ 3 (but < 4.5)  → icon  #fff
+   lighten 30%: rgb(0,155,0)   → rgb(77,185,77)   [0+255*.3=76.5→77,
+                                                   155+100*.3=185,
+                                                   0+255*.3=76.5→77]
+   darken  20%: rgb(0,155,0)   → rgb(0,124,0)     [155*.8=124]
+   --------------------------------------------------------------- */
+.cw-host[data-accent="green"],
+.cw-host [data-accent="green"] {
+  --cw-accent:          #009B00;
+  --cw-accent-text:     #000000;  /* readableColor(#009B00), luminance 0.234 > 0.179 */
+  --cw-accent-icon:     #ffffff;  /* readableIconColor(#009B00), 3.69:1 >= 3 */
+  --cw-accent-gradient: linear-gradient(
+                          135deg,
+                          rgba(77, 185, 77, 0.6),   /* lighten 30% @ 0.6 */
+                          rgba(0, 124, 0, 0.8),     /* darken  20% @ 0.8 */
+                          rgba(0, 155, 0, 0.7)      /* base       @ 0.7 */
+                        );
+  --gradient-border: linear-gradient(
+                       135deg,
+                       rgba(77, 185, 77, 0.6),
+                       rgba(0, 124, 0, 0.8),
+                       rgba(0, 155, 0, 0.7)
+                     );  /* AnimatedGradientBorder reads --gradient-border by name */
+
+  /* Re-point the themable slots that follow the accent. */
+  --color-chat-launcher:      #009B00;
+  --color-chat-launcher-fill: #009B00;
+  --color-chat-launcher-icon: #ffffff;
+  --color-chat-launcher-text: #000000;
+  --color-header-background:  #009B00;
+  --gl-accent:                #009B00;
+  --gl-focus-ring:            #009B00;  /* 3.69:1 on white ≥ 3 → qualifies */
+  --portal-brand:             #009B00;
+}
+
+/* --- Purple #8C69F0 — the on-page launcher's stock accent --------
+   luminance      ≈ 0.220  > 0.179          → text  #000
+   contrast(white)  3.89:1 ≥ 3 (but < 4.5)  → icon  #fff
+   lighten 30%: rgb(140,105,240) → rgb(175,150,245) [140+115*.3=174.5→175,
+                                                     105+150*.3=150,
+                                                     240+15*.3=244.5→245]
+   darken  20%: rgb(140,105,240) → rgb(112,84,192)  [140*.8=112,
+                                                     105*.8=84,
+                                                     240*.8=192]
+   --------------------------------------------------------------- */
+.cw-host[data-accent="purple"],
+.cw-host [data-accent="purple"] {
+  --cw-accent:          #8C69F0;
+  --cw-accent-text:     #000000;  /* readableColor(#8C69F0), luminance 0.220 > 0.179 */
+  --cw-accent-icon:     #ffffff;  /* readableIconColor(#8C69F0), 3.89:1 >= 3 */
+  --cw-accent-gradient: linear-gradient(
+                          135deg,
+                          rgba(175, 150, 245, 0.6),  /* lighten 30% @ 0.6 */
+                          rgba(112, 84, 192, 0.8),   /* darken  20% @ 0.8 */
+                          rgba(140, 105, 240, 0.7)   /* base       @ 0.7 */
+                        );
+  --gradient-border: linear-gradient(
+                       135deg,
+                       rgba(175, 150, 245, 0.6),
+                       rgba(112, 84, 192, 0.8),
+                       rgba(140, 105, 240, 0.7)
+                     );
+
+  --color-chat-launcher:      #8C69F0;
+  --color-chat-launcher-fill: #8C69F0;
+  --color-chat-launcher-icon: #ffffff;
+  --color-chat-launcher-text: #000000;
+  --color-header-background:  #8C69F0;
+  --gl-accent:                #8C69F0;
+  --gl-focus-ring:            #8C69F0;  /* 3.89:1 on white ≥ 3 → qualifies */
+  --portal-brand:             #8C69F0;
+}
+
+/* Default accent set when no data-accent attribute is present:
+   the widget's own stock green, matching --color-chat-launcher above. */
+.cw-host {
+  --cw-accent:          #009B00;
+  --cw-accent-text:     #000000;
+  --cw-accent-icon:     #ffffff;
+  --cw-accent-gradient: linear-gradient(
+                          135deg,
+                          rgba(77, 185, 77, 0.6),
+                          rgba(0, 124, 0, 0.8),
+                          rgba(0, 155, 0, 0.7)
+                        );
+
+  /* --gradient-border default: PURPLE, not green.
+     The AnimatedGradientBorder ring belongs to the ON-PAGE LAUNCHER
+     surface, whose stock accent is #8C69F0 (spec §1) — deliberately
+     different from the widget chrome's green. With no data-accent
+     attribute the launcher must still paint its ring, so the default
+     declared here mirrors --gl-accent, not --cw-accent. Setting
+     data-accent overrides this from the blocks above.
+     Sole owner of this value: consumers read var(--gradient-border)
+     and must not carry their own copy of the stops. */
+  --gradient-border: linear-gradient(
+                       135deg,
+                       rgba(175, 150, 245, 0.6),  /* lighten 30% @ 0.6 */
+                       rgba(112, 84, 192, 0.8),   /* darken  20% @ 0.8 */
+                       rgba(140, 105, 240, 0.7)   /* base       @ 0.7 */
+                     );
+}

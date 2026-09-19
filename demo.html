@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Path A Demo — plate + Gladly twin</title>
+<!--
+  Full-bleed site plate + bottom-right iframe → pane.html (isolated cw- twin).
+  Spec-driven: loads packs/<pack>/demo-spec.json for plate path + pane query.
+-->
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #111;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  #plate-wrap {
+    position: fixed;
+    inset: 0;
+    overflow: auto;
+    background: #1a1a1a;
+  }
+  #plate {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+  /* Prefer natural screenshot height when taller than viewport */
+  #plate.natural {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    object-fit: contain;
+    object-position: top center;
+  }
+  #twin-frame {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 380px;
+    height: 640px;
+    max-height: calc(100vh - 48px);
+    border: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(0, 0, 0, 0.08);
+    background: #fff;
+    z-index: 50;
+  }
+  #boot-bar {
+    position: fixed;
+    left: 16px;
+    top: 12px;
+    z-index: 60;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 12px;
+    backdrop-filter: blur(8px);
+  }
+  #boot-bar a { color: #9fef9f; }
+  #boot-bar button {
+    border: 0;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font: 600 12px/1.2 system-ui, sans-serif;
+    background: #009B00;
+    color: #fff;
+    cursor: pointer;
+  }
+  #boot-bar button:hover { filter: brightness(1.08); }
+  #boot-err {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 60;
+    max-width: 420px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #3b0a0a;
+    color: #ffb4b4;
+    font-size: 13px;
+    display: none;
+  }
+  @media (max-width: 520px) {
+    #twin-frame {
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: min(70vh, 640px);
+      border-radius: 16px 16px 0 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-bar">
+  <strong>Path A</strong>
+  <span id="boot-label">loading…</span>
+  <a id="boot-pane-link" href="pane.html" target="_blank" rel="noopener">open pane</a>
+  <button id="replay" type="button">Replay</button>
+</div>
+<div id="boot-err" role="alert"></div>
+
+<div id="plate-wrap">
+  <img id="plate" alt="Site plate" src="" hidden>
+</div>
+
+<iframe
+  id="twin-frame"
+  title="Gladly Chat SDK twin"
+  src="about:blank"
+  allow="clipboard-write"
+></iframe>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(location.search);
+  var pack = params.get("pack") || "huckberry-fatigue-firecrawl";
+  var specUrl = params.get("spec") || ("packs/" + pack + "/demo-spec.json");
+  var plateOverride = params.get("plate"); // optional: homepage | pdp | path
+
+  function showErr(msg) {
+    var el = document.getElementById("boot-err");
+    el.style.display = "block";
+    el.textContent = msg;
+    console.error(msg);
+  }
+
+  function resolvePlate(spec) {
+    if (plateOverride === "homepage") {
+      return "packs/" + pack + "/plate/homepage.png";
+    }
+    if (plateOverride === "pdp") {
+      return "packs/" + pack + "/plate/pdp-fatigue-pant.png";
+    }
+    if (plateOverride && plateOverride !== "auto") {
+      return plateOverride;
+    }
+    var plate = spec.plate || {};
+    if (plate.path) {
+      // already demo-root relative in pack spec
+      return plate.path;
+    }
+    if (plate.screenshotUrl) return plate.screenshotUrl;
+    return "packs/" + pack + "/plate/pdp-fatigue-pant.png";
+  }
+
+  document.getElementById("boot-label").textContent = pack;
+  document.getElementById("boot-pane-link").href =
+    "pane.html?pack=" + encodeURIComponent(pack);
+
+  // Boot twin with progressive play (typing + sequential reveals)
+  var frame = document.getElementById("twin-frame");
+  function bootPane() {
+    frame.src = "pane.html?pack=" + encodeURIComponent(pack) + "&t=" + Date.now();
+  }
+  bootPane();
+  var replayBtn = document.getElementById("replay");
+  if (replayBtn) {
+    replayBtn.addEventListener("click", function () {
+      bootPane();
+    });
+  }
+
+  fetch(specUrl, { cache: "no-store" })
+    .then(function (r) {
+      if (!r.ok) throw new Error("demo-spec " + r.status + " @ " + specUrl);
+      return r.json();
+    })
+    .then(function (spec) {
+      var plateSrc = resolvePlate(spec);
+      var img = document.getElementById("plate");
+      img.onload = function () {
+        // Tall screenshots scroll; short ones cover
+        if (img.naturalHeight > window.innerHeight * 1.05) {
+          img.classList.add("natural");
+        }
+        img.hidden = false;
+      };
+      img.onerror = function () {
+        showErr("Plate failed to load: " + plateSrc + " — try ?plate=homepage");
+      };
+      img.src = plateSrc;
+      img.alt = ((spec.prospect && spec.prospect.name) || pack) + " site plate";
+
+      document.title =
+        ((spec.prospect && spec.prospect.name) || "Path A") +
+        " — plate + Gladly twin";
+
+      window.__PATH_A_DEMO = { pack: pack, spec: spec, plate: plateSrc };
+    })
+    .catch(function (err) {
+      showErr("Demo boot failed: " + (err && err.message ? err.message : err));
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+{
+  "prospect": {
+    "name": "Huckberry",
+    "domain": "huckberry.com"
+  },
+  "header": {
+    "title": "Huckberry",
+    "subtitle": "AI shopping associate"
+  },
+  "turns": [
+    {
+      "i": 1,
+      "role": "shopper",
+      "text": "I'm browsing Huckberry \u2014 help me find the right pants.",
+      "beat": "arrive"
+    },
+    {
+      "i": 2,
+      "role": "agent",
+      "text": "You're on Huckberry. Want work pants or something more polished?",
+      "beat": "arrive"
+    },
+    {
+      "i": 3,
+      "role": "shopper",
+      "text": "Tell me about the Flint and Tinder Fatigue Pant.",
+      "beat": "product_q"
+    },
+    {
+      "i": 4,
+      "role": "agent",
+      "text": "Flint and Tinder Brushed Sateen Fatigue Pant \u2014 $128.00 on this page.",
+      "beat": "product_q"
+    },
+    {
+      "i": 5,
+      "role": "shopper",
+      "text": "Is shipping free on these?",
+      "beat": "product_q"
+    },
+    {
+      "i": 6,
+      "role": "agent",
+      "text": "On the product page: Free U.S. Shipping +$98, Free Returns and Best Price Guaranteed.",
+      "beat": "product_q"
+    },
+    {
+      "i": 7,
+      "role": "shopper",
+      "text": "How does that compare to the Waxed Harrington?",
+      "beat": "compare"
+    },
+    {
+      "i": 8,
+      "role": "agent",
+      "text": "Fatigue Pant is $128. Waxed Harrington Jacket is $268. Same Flint and Tinder line \u2014 pants vs jacket.",
+      "beat": "compare"
+    },
+    {
+      "i": 9,
+      "role": "shopper",
+      "text": "Does the Fatigue Pant run small?",
+      "beat": "fit"
+    },
+    {
+      "i": 10,
+      "role": "agent",
+      "text": "Waist and inseam are on this pant page \u2014 I'll point you to them.",
+      "beat": "fit"
+    },
+    {
+      "i": 11,
+      "role": "shopper",
+      "text": "What are other people saying?",
+      "beat": "social"
+    },
+    {
+      "i": 12,
+      "role": "agent",
+      "text": "I don't have proven review text in this scan. Free Returns and Best Price Guaranteed are on the merch if fit is the worry.",
+      "beat": "social"
+    },
+    {
+      "i": 13,
+      "role": "shopper",
+      "text": "Can you add a 32 to my cart?",
+      "beat": "soft_close"
+    },
+    {
+      "i": 14,
+      "role": "agent",
+      "text": "Size and Add to bag are on this pant page for $128. I'll point you to them \u2014 I can stay on fit and Free Returns from here.",
+      "beat": "soft_close"
+    }
+  ],
+  "products": [
+    {
+      "name": "Flint and Tinder Brushed Sateen Fatigue Pant (British Khaki)",
+      "imageUrl": "film-assets/fatigue-pant-british-khaki.jpg",
+      "pageUrl": "https://www.huckberry.com/store/flint-and-tinder/category/p/1001044-flannel-sateen-fatigue-pant",
+      "displayPrice": "$128.00"
+    },
+    {
+      "name": "Flint and Tinder Waxed Harrington Jacket (Tan)",
+      "imageUrl": "film-assets/waxed-harrington-tan.jpg",
+      "pageUrl": "https://www.huckberry.com/store/flint-and-tinder/category/p/1000950-waxed-harrington-jacket",
+      "displayPrice": "$268.00"
+    }
+  ],
+  "softClose": true,
+  "plate": {
+    "path": "packs/huckberry-fatigue-firecrawl/plate/pdp.png"
+  }
+}

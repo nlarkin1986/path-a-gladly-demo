@@ -1,0 +1,586 @@
+/* ==============================================================
+   Gladly Chat SDK v2 — chat-messages.css
+   Tier B messages: the message list, user bubble, agent message,
+   text + HTML parts, composite part spacing, image (with the
+   broken-image fallback), file chip, typing indicator, streaming,
+   and the ProductList / ProductCard 3-up grid.
+
+   Source of truth:
+   1. sagansystems/chat-sdk, web-v2/src/ (extracted 2026-08-12).
+   2. docs/plans/2026-08-12-001-chat-sdk-v2-design-spec.md §5
+      (Tier B — every value below), §7 (icon sizes), §9
+      (accessibility conventions), §1 (theme variables).
+
+   SCOPE — read before editing (plan KTD4):
+   This file owns MESSAGES ONLY. Chrome (Tier A) lives in
+   chat-chrome.css, commerce surfaces (payment items, checkout,
+   payment form) in the commerce unit, and launcher surfaces
+   (Tier C) in their own file. PaymentRequestMessageItem and
+   PaymentStatusBanner appear inside §5 but are commerce, not
+   messages — deliberately absent here. Every rule is scoped under
+   .cw-host and every class carries the cw- prefix (KTD5). Nothing
+   outside design-system/chat-widget/ is imported or touched.
+
+   Requires (loaded first): chat-tokens.css for the .cw-host token
+   scope; chat-chrome.css for the .cw-icon base rule and .cw-body
+   (this file only adds the message-tier icon SIZE that chrome does
+   not already cover).
+
+   Markup shape:
+     <div class="cw-host" data-accent="green">
+       <div class="cw-body">
+         <div class="cw-messages">
+
+           <div class="cw-msg cw-msg-user">
+             <div class="cw-msg-text">…</div>
+           </div>
+
+           <div class="cw-msg cw-msg-agent">
+             <div class="cw-msg-text">…</div>
+           </div>
+
+           <!-- streaming: identical classes + the labelled alias -->
+           <div class="cw-msg cw-msg-agent cw-msg-streaming">
+             <div class="cw-msg-text">…</div>
+           </div>
+
+           <div class="cw-msg cw-msg-agent">
+             <div class="cw-msg-html">
+               <p>…</p><ul><li>…</li></ul>
+             </div>
+           </div>
+
+           <div class="cw-msg cw-msg-agent">
+             <div class="cw-msg-part">…</div>
+             <div class="cw-msg-part cw-extra-leading-space">…</div>
+             <div class="cw-msg-part cw-extra-trailing-space">…</div>
+           </div>
+
+           <div class="cw-msg cw-msg-agent">
+             <img class="cw-msg-image" src="…" alt="…">
+           </div>
+           <div class="cw-msg cw-msg-agent">
+             <div class="cw-msg-image-broken" role="img" aria-label="Image unavailable">
+               <svg class="cw-icon cw-icon-broken-image" aria-hidden="true">
+                 <use href="icons.svg#cw-icon-broken-image"/>
+               </svg>
+             </div>
+           </div>
+
+           <div class="cw-msg cw-msg-agent">
+             <span class="cw-msg-file">
+               <a class="cw-msg-file-link" href="…">receipt.pdf</a>
+             </span>
+           </div>
+
+           <div class="cw-typing" aria-hidden="true">
+             <span class="cw-typing-dot"></span>
+             <span class="cw-typing-dot"></span>
+             <span class="cw-typing-dot"></span>
+           </div>
+           <span class="cw-sr-only" role="status">Agent is typing</span>
+
+           <div class="cw-msg cw-msg-agent">
+             <div class="cw-product-list">
+               <a class="cw-product-card" href="#">
+                 <div class="cw-product-card-media">
+                   <div class="cw-product-card-image-well">
+                     <img class="cw-product-card-image" src="…" alt="">
+                   </div>
+                 </div>
+                 <div class="cw-product-card-content">
+                   <span class="cw-product-card-name">…</span>
+                 </div>
+               </a>
+               … x3 …
+             </div>
+           </div>
+
+         </div>
+       </div>
+     </div>
+
+   THE UNIVERSAL MOBILE BREAKPOINT (spec §4) is
+     (max-width: 500px), (orientation: landscape) and (max-height: 500px)
+   and is used verbatim by the one mobile block below — never
+   narrowed to width alone.
+   ============================================================== */
+
+/* ================================================================
+   ICON SIZING — spec §7
+   chat-chrome.css owns the .cw-icon base rule (display/flex/fill/
+   transition) and sizes the nine chrome-used symbols. BrokenImage
+   is the one message-tier symbol it does not cover, so its size
+   lives here.
+
+   BrokenImage is the sprite's fixed-color exception: its path
+   carries fill="#B3B3B3" as a presentation attribute, which beats
+   the `fill: currentColor` inherited from .cw-icon on the <svg>.
+   That is intentional per §7 — do not "fix" it to currentColor.
+   ================================================================ */
+.cw-host .cw-icon-broken-image { width: 24px; height: 24px; }
+
+/* ================================================================
+   MESSAGES LIST — spec §5 (Messages list)
+   Flex column gap 8px, max-width 800px centered, fade-in 0.2s.
+   Empty state: #767676 14px centered,
+   fadeIn 0.3s ease-in 0.5s forwards.
+   Keyframe names carry the cw- prefix (they are document-global,
+   like chat-shell.css's cw-mobileSlideUp) but keep the source name
+   as the suffix.
+   ================================================================ */
+.cw-host .cw-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  animation: cw-fadeIn 0.2s;
+}
+
+.cw-host .cw-messages-empty {
+  color: #767676;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;                       /* fadeIn holds the end state via `forwards` */
+  animation: cw-fadeIn 0.3s ease-in 0.5s forwards;
+}
+
+@keyframes cw-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ================================================================
+   MESSAGE BASE
+   Structural only — the two variants below carry every extracted
+   value. The list is the flex container, so alignment is set with
+   align-self on each item.
+   ================================================================ */
+.cw-host .cw-msg {
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  min-width: 0;
+}
+
+/* ---- USER BUBBLE — spec §5 -------------------------------------
+   align-self: flex-end
+   background : var(--color-brand-secondary, #d8f4d8)
+                (#d8f4d8 is the CSS-MODULE fallback; the theme
+                 variable's own default is #F3F3F3 per §1, and
+                 chat-tokens.css sets it — so the computed value is
+                 #F3F3F3. The module fallback stays in fallback
+                 position, the same way chat-chrome.css keeps
+                 #8c69f0 behind --color-chat-launcher.)
+   radius     : 20px 1px 20px 20px — the 1px TR corner is the tail
+   max-width  : 85%
+   padding    : 14px
+   ---------------------------------------------------------------- */
+.cw-host .cw-msg-user {
+  align-self: flex-end;
+  background: var(--color-brand-secondary, #d8f4d8);
+  max-width: 85%;
+  padding: 14px;
+
+  /* Longhand base first so the shorthand cannot be partially
+     overridden out of order. */
+  border-radius: 20px 1px 20px 20px;
+
+  /* Per-corner override behavior (§5): TL / BL / BR follow the
+     org's --border-radius when one is set; the TR tail corner is
+     pinned at 1px and never themed. With --border-radius unset —
+     production's default — all three fall back to 20px, so the
+     computed value is exactly `20px 1px 20px 20px`. */
+  border-top-left-radius: var(--border-radius, 20px);
+  border-top-right-radius: 1px;
+  border-bottom-left-radius: var(--border-radius, 20px);
+  border-bottom-right-radius: var(--border-radius, 20px);
+}
+
+/* ---- AGENT MESSAGE — spec §5 -----------------------------------
+   NO BUBBLE: transparent, padding 12px 0, max-width 100%, start.
+
+   STREAMING (spec §5, StreamingMessageItem): renders with the SAME
+   agent text classes — no visual distinction from settled agent
+   text. .cw-msg-streaming is therefore a LABEL, not a treatment:
+   it is grouped into every agent selector in this file and adds
+   zero declarations of its own, so a streaming message computes
+   byte-identically to a settled one. It exists so the showcase can
+   demonstrate the "no visual distinction" claim rather than leave
+   it unbuilt. Never give this class a distinguishing rule.
+   ---------------------------------------------------------------- */
+.cw-host .cw-msg-agent,
+.cw-host .cw-msg-streaming {
+  align-self: flex-start;
+  background: transparent;
+  max-width: 100%;
+  padding: 12px 0;
+  border-radius: 0;
+}
+
+/* ================================================================
+   TEXT — spec §5 (Text)
+   16px/24px --font-secondary, white-space: pre-wrap.
+   Links var(--link-color, #1a0dab) underlined; user-side
+   ellipsize, agent-side wrap.
+   ================================================================ */
+.cw-host .cw-msg-text {
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 16px;
+  line-height: 24px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.cw-host .cw-msg-text a,
+.cw-host .cw-msg-html a {
+  color: var(--link-color, #1a0dab);
+  text-decoration: underline;
+}
+
+/* User side: a long URL is truncated rather than allowed to widen
+   or break the 85% bubble. */
+.cw-host .cw-msg-user .cw-msg-text a {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+/* Agent side: wrap instead — the plain (bubble-less) run has the
+   full column width to give. */
+.cw-host .cw-msg-agent .cw-msg-text a,
+.cw-host .cw-msg-streaming .cw-msg-text a,
+.cw-host .cw-msg-agent .cw-msg-html a,
+.cw-host .cw-msg-streaming .cw-msg-html a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ================================================================
+   HTML PART WRAPPER — spec §5 (HTML wrapper)
+   p { margin: 0 0 .5em }
+   lists { margin: 0 0 .5em 1.5em } with markers OUTSIDE
+   ================================================================ */
+.cw-host .cw-msg-html {
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.cw-host .cw-msg-html p {
+  margin: 0 0 0.5em;
+}
+
+.cw-host .cw-msg-html ul,
+.cw-host .cw-msg-html ol {
+  margin: 0 0 0.5em 1.5em;
+  padding: 0;
+  list-style-position: outside;
+}
+
+/* ================================================================
+   COMPOSITE MESSAGE CONTENT — spec §5 (CompositeMessageContent)
+   parts margin-bottom: .25em;
+   .extraLeadingSpace / .extraTrailingSpace = .75em;
+   last child 0.
+   ================================================================ */
+.cw-host .cw-msg-part {
+  margin-bottom: 0.25em;
+}
+
+.cw-host .cw-msg-part.cw-extra-leading-space {
+  margin-top: 0.75em;
+}
+
+.cw-host .cw-msg-part.cw-extra-trailing-space {
+  margin-bottom: 0.75em;
+}
+
+/* Ordered last so it wins over the trailing-space bump, matching
+   the source's `&:last-child { margin-bottom: 0 }`. */
+.cw-host .cw-msg-part:last-child {
+  margin-bottom: 0;
+}
+
+/* ================================================================
+   IMAGE MESSAGE — spec §5 (ImageMessageItem)
+   image: 1px solid #e3e3e3, radius var(--border-radius, 8px),
+   max-height 800px, object-fit contain.
+   broken fallback: 200x200 bordered box with the BrokenImage icon.
+   ================================================================ */
+.cw-host .cw-msg-image {
+  display: block;
+  max-width: 100%;
+  max-height: 800px;
+  object-fit: contain;
+  border: 1px solid #e3e3e3;
+  border-radius: var(--border-radius, 8px);
+}
+
+.cw-host .cw-msg-image-broken {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e3e3e3;
+  border-radius: var(--border-radius, 8px);
+  background: #ffffff;   /* inferred: spec names the box and its border
+                            but no fill; white matches the surrounding
+                            body so the border reads as the whole box */
+}
+
+/* ================================================================
+   FILE MESSAGE — spec §5 (FileMessageItem)
+   inline chip white / #e3e3e3 border, radius var(--border-radius, 20px),
+   padding 8px 16px; link accent 14px/20px, hover underline.
+   The accent chain reads --cw-accent first (the precomputed set in
+   chat-tokens.css) and falls back to the source's own
+   var(--color-chat-launcher, #8c69f0) position — same convention as
+   chat-chrome.css.
+   ================================================================ */
+.cw-host .cw-msg-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;                        /* inferred: spec names no gap; only
+                                      relevant when an icon precedes the link */
+  max-width: 100%;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: var(--border-radius, 20px);
+  padding: 8px 16px;
+}
+
+.cw-host .cw-msg-file-link {
+  color: var(--cw-accent, var(--color-chat-launcher, #8c69f0));
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-msg-file-link:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ================================================================
+   TYPING INDICATOR — spec §5 (Typing indicator)
+   3 dots 8px #767676, gap 4px,
+   typingAnimation 1.4s infinite (translateY -10px + opacity .7 -> 1
+   at 30%), delays 0 / .2s / .4s, container pad 12px 16px 12px 0.
+   §9: the dots are aria-hidden with an sr-only live region beside
+   them (markup concern; .cw-sr-only is provided below).
+   ================================================================ */
+.cw-host .cw-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px 12px 0;
+  align-self: flex-start;
+}
+
+.cw-host .cw-typing-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: #767676;
+  opacity: 0.7;
+  animation: cw-typingAnimation 1.4s infinite;
+}
+
+/* Staggered delays. Both the positional and the explicit forms are
+   provided so the showcase can label a single dot in isolation. */
+.cw-host .cw-typing-dot:nth-child(1),
+.cw-host .cw-typing-dot.cw-typing-dot-1 { animation-delay: 0s;   }
+.cw-host .cw-typing-dot:nth-child(2),
+.cw-host .cw-typing-dot.cw-typing-dot-2 { animation-delay: 0.2s; }
+.cw-host .cw-typing-dot:nth-child(3),
+.cw-host .cw-typing-dot.cw-typing-dot-3 { animation-delay: 0.4s; }
+
+@keyframes cw-typingAnimation {
+  0%   { transform: translateY(0);     opacity: 0.7; }
+  30%  { transform: translateY(-10px); opacity: 1;   }
+  100% { transform: translateY(0);     opacity: 0.7; }
+}
+
+/* Screen-reader-only live region companion (§9). */
+.cw-host .cw-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================================================================
+   PRODUCT LIST — spec §5 (ProductList)
+   flex wrap, gap 24px, margins 16px 0.
+   ================================================================ */
+.cw-host .cw-product-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 16px 0;
+}
+
+/* ---- PRODUCT CARD — spec §5 (ProductCard) ----------------------
+   link          flex: 1 1 calc(33.333% - 16px)  (3-up), gap 12px
+   card          white, 1px solid #ddd, radius var(--border-radius, 12px)
+   hover         border #aaa + shadow 0 2px 8px rgba(0,0,0,0.08)
+                 + scale(1.02), transitions .2s / .1s
+   focus-visible ring 2px #005fcc  (see the reconciliation note)
+   image well    aspect-ratio 1, bg var(--color-product-image-background, #fff),
+                 image absolute-fill, object-fit contain
+   name          16px bold, 2-line clamp; content height 36px / lh 18px
+
+   STRUCTURE: the <a> is the flex ITEM (basis + 12px gap); the
+   bordered "card" is the media box it contains, and the name sits
+   BELOW that box — which is what the 12px gap separates and why
+   the spec names no padding for the name.
+   ---------------------------------------------------------------- */
+.cw-host .cw-product-card {
+  flex: 1 1 calc(33.333% - 16px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cw-host .cw-product-card-media {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius, 12px);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.cw-host .cw-product-card-image-well {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--color-product-image-background, #ffffff);
+}
+
+.cw-host .cw-product-card-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Hover — gated on (hover: hover) and (pointer: fine) per §9 so a
+   touch device never gets a stuck lift. */
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-product-card:hover .cw-product-card-media {
+    border-color: #aaa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: scale(1.02);
+  }
+}
+
+/* FOCUS-RING RECONCILIATION (§9 vs §5):
+   §9 declares a UNIVERSAL ring — `outline: 2px solid #005fcc;
+   outline-offset: 2px` — and R10 makes it a hard constraint on
+   every focusable control. §5 records ProductCard's ring as
+   `0 0 0 2px #005fcc`, i.e. the same 2px #005fcc indicator
+   expressed as the source's box-shadow spread.
+   RESOLVED IN FAVOUR OF THE OUTLINE, for three reasons:
+     1. §9 is explicitly universal and §5's form is a per-module
+        implementation detail of the same visual result;
+     2. chat-chrome.css already enumerates this exact outline for
+        every control it owns — one library, one focus mechanism;
+     3. a box-shadow ring would collide with this card's hover
+        box-shadow (0 2px 8px), which an outline cannot.
+   Color, width and visual weight are identical either way. */
+.cw-host .cw-product-card:focus-visible {
+  outline: var(--cw-focus-ring-width, 2px) solid var(--cw-focus-ring-color, #005fcc);
+  outline-offset: var(--cw-focus-ring-offset, 2px);
+}
+
+.cw-host .cw-product-card-content {
+  height: 36px;
+  line-height: 18px;
+  overflow: hidden;
+}
+
+.cw-host .cw-product-card-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+/* ================================================================
+   MOBILE REFLOW — *** INFERRED ***
+   The spec does NOT state a reflow for the product grid below the
+   universal breakpoint; §5 gives the 3-up basis only. At a 400px
+   viewport the widget body's 16px gutters leave ~368px, which a
+   3-up rack with 24px gaps would cut to ~107px cards — narrower
+   than the 2-line name they must carry.
+   Authored, not extracted: drop to 2-up and tighten the gap to
+   16px (two cards share one 16px gap, hence the -8px basis). If a
+   future extraction supplies the real value, replace this block.
+   The breakpoint itself is NOT inferred — it is §4's universal one,
+   used verbatim. flex-grow stays at the spec's 1, so an orphan card
+   on the last row stretches to fill it — the same behavior the
+   spec's own 3-up basis produces at desktop with 4+ products.
+   ================================================================ */
+@media (max-width: 500px), (orientation: landscape) and (max-height: 500px) {
+  .cw-host .cw-product-list {
+    gap: 16px;
+  }
+
+  .cw-host .cw-product-card {
+    flex: 1 1 calc(50% - 8px);
+  }
+}
+
+/* ================================================================
+   REDUCED MOTION — spec §9
+   The typing dots go inert (kept visible at their resting opacity),
+   the list/empty-state fades resolve instantly, and the product
+   card's hover tweening stops. The hover STATE still applies — only
+   the animation stops.
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .cw-host .cw-typing-dot {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .cw-host .cw-messages {
+    animation: none;
+  }
+
+  .cw-host .cw-messages-empty {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cw-host .cw-product-card-media {
+    transition: none;
+  }
+}

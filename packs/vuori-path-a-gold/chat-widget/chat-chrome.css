@@ -1,0 +1,922 @@
+/* ==============================================================
+   Gladly Chat SDK v2 — chat-chrome.css
+   Tier A widget chrome: Header, Body, Footer, Composer (pill,
+   attach + send, suppressed), QuickReplies, AttachmentPreview,
+   AttachmentError, EndMessage, PrivacyDisclaimer, PoweredByGladly,
+   ScrollToBottomButton, Tooltip (four placements).
+
+   Source of truth:
+   1. sagansystems/chat-sdk, web-v2/src/ (extracted 2026-08-12).
+   2. docs/plans/2026-08-12-001-chat-sdk-v2-design-spec.md §4
+      (Tier A component specs — every value below), §7 (icon sizes),
+      §9 (accessibility conventions), §3 (alert-red per context).
+
+   SCOPE — read before editing (plan KTD4):
+   This file owns CHROME ONLY. Message bubbles (Tier B), commerce
+   surfaces (ExpressCheckoutBox / SecurePaymentForm / payment items),
+   and launcher surfaces (Tier C) live in their own files. Every
+   rule here is scoped under .cw-host and every class carries the
+   cw- prefix (KTD5). Nothing outside design-system/chat-widget/ is
+   imported or touched.
+
+   Requires (loaded first): chat-tokens.css for the .cw-host token
+   scope, chat-shell.css for .cw-container's flex column.
+
+   Markup shape:
+     <div class="cw-host" data-accent="green">
+       <div class="cw-container cw-is-panel">
+         <header class="cw-header">…</header>
+         <div class="cw-body">… messages …
+           <button class="cw-scroll-btn cw-is-visible">…</button>
+         </div>
+         <footer class="cw-footer">
+           <div class="cw-quick-replies">…</div>
+           <div class="cw-composer">
+             <div class="cw-attachment-preview">…</div>
+             <div class="cw-composer-pill">
+               <button class="cw-attach-btn">…</button>
+               <textarea class="cw-composer-input"></textarea>
+               <button class="cw-send-btn cw-has-content">…</button>
+             </div>
+           </div>
+           <p class="cw-privacy-disclaimer">…</p>
+           <div class="cw-powered-by"><a class="cw-powered-by-link">…</a></div>
+         </footer>
+       </div>
+     </div>
+
+   THE UNIVERSAL MOBILE BREAKPOINT (spec §4) is
+     (max-width: 500px), (orientation: landscape) and (max-height: 500px)
+   and is used verbatim by every mobile block below — never narrowed
+   to width alone.
+   ============================================================== */
+
+/* ================================================================
+   ICON SIZING — spec §7
+   Each production icon ships as a module that fixes its rendered
+   size and carries `transition: color 0.2s`. Reproduced here as
+   classes named after the sprite symbols they wrap, so markup is
+     <svg class="cw-icon cw-icon-x-close"><use href="icons.svg#cw-icon-x-close"/></svg>
+   Only the icons the chrome actually uses are sized here; the
+   remaining sprite symbols belong to the units that consume them.
+   NOTE: viewBoxes are NOT square for several icons — the sizes
+   below are the SOURCE rendered sizes, not a normalized grid.
+   ================================================================ */
+.cw-host .cw-icon {
+  display: block;
+  flex: none;
+  fill: currentColor;
+  transition: color 0.2s;
+}
+
+.cw-host .cw-icon-close        { width: 22px; height: 2px;  }  /* minimize bar — genuinely 22x2 */
+.cw-host .cw-icon-x-close      { width: 16px; height: 16px; }
+.cw-host .cw-icon-maximize     { width: 20px; height: 18px; }
+.cw-host .cw-icon-panel        { width: 20px; height: 18px; }
+.cw-host .cw-icon-sound-on     { width: 20px; height: 20px; }
+.cw-host .cw-icon-sound-off    { width: 20px; height: 20px; }
+.cw-host .cw-icon-paper-plane  { width: 16px; height: 16px; }
+.cw-host .cw-icon-paperclip    { width: 16px; height: 18px; }
+.cw-host .cw-icon-chevron-down { width: 24px; height: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-host .cw-icon { transition: none; }
+}
+
+/* ================================================================
+   FOCUS RING — spec §9 (R10)
+   Universal: outline: 2px solid #005fcc; outline-offset: 2px.
+   Enumerated across EVERY focusable control this file owns. The
+   two documented exceptions (payment card #81b5ea, portal form 3px
+   brand) belong to the commerce unit, not here.
+   ================================================================ */
+.cw-host .cw-header-btn:focus-visible,
+.cw-host .cw-composer-input:focus-visible,
+.cw-host .cw-attach-btn:focus-visible,
+.cw-host .cw-send-btn:focus-visible,
+.cw-host .cw-quick-reply:focus-visible,
+.cw-host .cw-attachment-remove:focus-visible,
+.cw-host .cw-attachment-error-dismiss:focus-visible,
+.cw-host .cw-privacy-disclaimer a:focus-visible,
+.cw-host .cw-powered-by-link:focus-visible,
+.cw-host .cw-scroll-btn:focus-visible,
+.cw-host .cw-tooltip-host:focus-visible {
+  outline: var(--cw-focus-ring-width, 2px) solid var(--cw-focus-ring-color, #005fcc);
+  outline-offset: var(--cw-focus-ring-offset, 2px);
+}
+
+/* The composer textarea is the one control whose SOURCE focus
+   treatment is the pill's focus-within border (rgba(0,0,0,0.72)),
+   not an outline. Spec §9's universal ring is a hard constraint on
+   the rebuild (R10: "every focusable control"), so the textarea
+   carries BOTH — the pill still darkens, and the field itself is
+   independently indicated. Documented deviation, not an oversight. */
+
+/* ================================================================
+   HEADER — spec §4 (Header)
+   bg + 1px bottom border   var(--color-header-background, #009b00)
+   text color               readableColor(headerBg) → #000 on the
+                            default green (NEVER white — see the
+                            ACCENTS block in chat-tokens.css)
+   padding                  16px 24px  (32px sides fullscreen,
+                            16px mobile; mobile height 60px + safe area)
+   ================================================================ */
+.cw-host .cw-header {
+  flex: 0 0 auto;
+  background: var(--color-header-background, #009b00);
+  border-bottom: 1px solid var(--color-header-background, #009b00);
+  color: var(--cw-accent-text, #000000);
+  padding: 16px 24px;
+
+  /* Layout scaffolding — the source composes the row in JSX; these
+     three lines are structural, not extracted values. */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Logo — 40x40, object-fit: cover. */
+.cw-host .cw-header-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  flex: none;
+}
+
+/* Title block: allow the ellipsis on the heading to actually engage. */
+.cw-host .cw-header-titles {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cw-host .cw-header-heading {
+  font-family: var(--font-primary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: inherit;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cw-host .cw-header-subheading {
+  font-family: var(--font-primary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: inherit;
+  margin: 0;
+}
+
+/* Button group — gap 12px. Buttons: sound, panel<->fullscreen
+   (hidden on mobile), close. */
+.cw-host .cw-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex: none;
+}
+
+/* Icon buttons — 32x32 round, transparent; foreground inherits the
+   derived header text color. */
+.cw-host .cw-header-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Hover wash — gated on (hover: hover) and (pointer: fine) per §9,
+   so touch devices never get a stuck tint. */
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-header-btn:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.cw-host .cw-header-btn:active:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.cw-host .cw-header-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Fullscreen mode widens the header gutters to 32px. */
+.cw-host .cw-container.cw-is-fullscreen .cw-header,
+.cw-host .cw-header.cw-is-fullscreen {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+@media (max-width: 500px), (orientation: landscape) and (max-height: 500px) {
+  .cw-host .cw-header,
+  .cw-host .cw-container.cw-is-fullscreen .cw-header,
+  .cw-host .cw-header.cw-is-fullscreen {
+    padding-left: 16px;
+    padding-right: 16px;
+    height: calc(60px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: 0;
+  }
+
+  /* Panel <-> fullscreen toggle is hidden on mobile. */
+  .cw-host .cw-header-btn.cw-header-btn-mode {
+    display: none;
+  }
+
+  /* The header hides entirely while the composer has focus. Driven
+     from JS in the source; expressed here as a container class plus
+     a direct escape hatch. */
+  .cw-host .cw-container.cw-composer-focused .cw-header,
+  .cw-host .cw-header.cw-is-hidden {
+    display: none;
+  }
+}
+
+/* ================================================================
+   BODY — spec §4 (Body)
+   White scroll container, overscroll-behavior: contain,
+   padding 16px 24px 32px (16px sides mobile).
+   ================================================================ */
+.cw-host .cw-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;              /* containing block for .cw-scroll-btn */
+  background: #ffffff;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 24px 32px;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+}
+
+@media (max-width: 500px), (orientation: landscape) and (max-height: 500px) {
+  .cw-host .cw-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ================================================================
+   FOOTER — spec §4 (Footer)
+   White, padding 0 24px 8px (16px bottom when no branding;
+   16px sides mobile + safe-area bottom), z-index: 1.
+   ================================================================ */
+.cw-host .cw-footer {
+  flex: 0 0 auto;
+  position: relative;              /* z-index needs a positioned box */
+  z-index: 1;
+  background: #ffffff;
+  padding: 0 24px 8px;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+}
+
+.cw-host .cw-footer.cw-no-branding {
+  padding-bottom: 16px;
+}
+
+@media (max-width: 500px), (orientation: landscape) and (max-height: 500px) {
+  .cw-host .cw-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cw-host .cw-footer.cw-no-branding {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ================================================================
+   COMPOSER — spec §4 (Composer)
+   Column max-width 800px centered. Pill: white, 1px solid
+   rgba(0,0,0,0.3), radius 24px, shadow 0 4px 12px 0 rgba(0,0,0,0.08),
+   margin-top: -16px (overlaps the body), focus-within border
+   rgba(0,0,0,0.72), transition 0.2s.
+   ================================================================ */
+.cw-host .cw-composer {
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cw-host .cw-composer-pill {
+  display: flex;
+  align-items: flex-end;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
+  margin-top: -16px;               /* overlaps the body above it */
+  padding: 0;
+  transition: border-color 0.2s;
+}
+
+/* BUTTONS_WITH_COMPOSER / attachment above composer: cancel the -16px
+   body-overlap pull and keep clear air under the rack. Production
+   Composer.module.css gates the pull with .innerBorder:first-child
+   (AttachmentPreview inside the composer); sibling QuickReplies in
+   Footer.tsx still need this when both rack and composer render.
+   8px matches the rack's own gap token. */
+.cw-host .cw-quick-replies + .cw-composer .cw-composer-pill,
+.cw-host .cw-attachment-preview + .cw-composer .cw-composer-pill {
+  margin-top: 8px;
+}
+
+.cw-host .cw-composer-pill:focus-within {
+  border-color: rgba(0, 0, 0, 0.72);
+}
+
+/* Textarea — 16px (also the iOS auto-zoom floor, §9), --font-secondary,
+   padding 16px 8px 16px 12px, max-height 200px, maxLength 1000 (markup). */
+.cw-host .cw-composer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 16px;
+  line-height: 20px;
+  color: #000000;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 16px 8px 16px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.cw-host .cw-composer-input::placeholder {
+  color: #767676;
+  opacity: 1;
+}
+
+/* ---- Attach (paperclip) button — 42x42 round, transparent,
+        icon #767676, hover wash #e8e8e8 (gated per §9). ------------ */
+.cw-host .cw-attach-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #767676;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, opacity 0.2s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-attach-btn:hover:not(:disabled) {
+    background-color: #e8e8e8;
+  }
+}
+
+.cw-host .cw-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- Send button — 42x42 circle, margins 0 -3px 0 4px.
+        EMPTY  : transparent bg, icon #767676
+        CONTENT: accent bg, icon --cw-accent-icon (#fff), hover
+                 filter brightness(1.15)
+        DISABLED: opacity 0.5
+        The accent chain reads --cw-accent first (the precomputed
+        set in chat-tokens.css) and falls back to the source's own
+        var(--color-chat-launcher, #8c69f0) position. ------------- */
+.cw-host .cw-send-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  flex: none;
+  margin: 0 -3px 0 4px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  color: #767676;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, filter 0.2s, opacity 0.2s;
+}
+
+.cw-host .cw-send-btn.cw-has-content {
+  background-color: var(--cw-accent, var(--color-chat-launcher, #8c69f0));
+  color: var(--cw-accent-icon, var(--color-chat-launcher-icon, #ffffff));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-send-btn.cw-has-content:hover:not(:disabled) {
+    filter: brightness(1.15);
+  }
+}
+
+.cw-host .cw-send-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- Suppressed composer — opacity 0.3 + inert (the `inert`
+        attribute is markup; the pointer-events kill is the CSS half).
+        BOTH buttons participate: the wrapper form fades the whole
+        pill, and the per-button modifier exists so a single control
+        can be shown suppressed in isolation. Never stack the two —
+        they would multiply to 0.09. ------------------------------- */
+.cw-host .cw-composer.cw-is-suppressed .cw-composer-pill {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cw-host .cw-attach-btn.cw-is-suppressed,
+.cw-host .cw-send-btn.cw-is-suppressed {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ================================================================
+   QUICK REPLIES — spec §4 (QuickReplies)
+   Wrap rack, gap 8px, max-height 40vh scroll, padding 12px 4px,
+   max-width 800px. Pill: white, 1px solid accent, radius 18px,
+   text #111111 14px/20px, padding 8px 14px, hover/active
+   rgba(0,0,0,0.05), disabled opacity 0.5, focus 2px #005fcc.
+   ================================================================ */
+.cw-host .cw-quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 12px 4px;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cw-host .cw-quick-reply {
+  background: #ffffff;
+  border: 1px solid var(--cw-accent, var(--color-chat-launcher, #8c69f0));
+  border-radius: 18px;
+  color: #111111;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-quick-reply:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.cw-host .cw-quick-reply:active:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.cw-host .cw-quick-reply:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ================================================================
+   ATTACHMENT PREVIEW — spec §4 (AttachmentPreview)
+   Container pad 8px 12px 0; thumbnail max 120x120 cover, radius
+   var(--border-radius, 8px); file chip white / #e3e3e3 border,
+   14px #333; remove button 20x20 white circle at (-8,-8), shadow
+   0 0 4px rgba(0,0,0,0.25), opacity 0 -> 1 on hover/focus (.15s).
+   ================================================================ */
+.cw-host .cw-attachment-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;                        /* inferred: spec fixes the container
+                                      padding only, not the inter-item gap */
+  padding: 8px 12px 0;
+}
+
+.cw-host .cw-attachment-item {
+  position: relative;
+  display: inline-flex;
+}
+
+.cw-host .cw-attachment-thumb {
+  display: block;
+  max-width: 120px;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: var(--border-radius, 8px);
+}
+
+.cw-host .cw-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: var(--border-radius, 8px);   /* inferred: spec is silent on
+                                                 this chip's radius; follows
+                                                 the neighbouring thumbnail */
+  color: #333333;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 8px 12px;               /* inferred: spec names no chip padding */
+  max-width: 240px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Remove button. TARGET-SIZE RECONCILIATION (§9 vs §4): §4 draws a
+   20x20 circle, §9 requires dismiss targets >= 24x24. The button box
+   is therefore 24x24 (so the hit target and the computed size both
+   satisfy §9) and the 20x20 white circle is painted by ::before,
+   centered — which lands its visible edge back at the spec's
+   (-8, -8) because the 24px box sits at -10px. */
+.cw-host .cw-attachment-remove {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  min-width: var(--cw-min-target, 24px);
+  min-height: var(--cw-min-target, 24px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #000000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.cw-host .cw-attachment-remove::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+}
+
+.cw-host .cw-attachment-remove > .cw-icon {
+  position: relative;              /* above the ::before disc */
+  width: 12px;                     /* inferred: spec fixes 12x12 for the
+                                      AttachmentError dismiss glyph and is
+                                      silent here; matched for consistency */
+  height: 12px;
+}
+
+/* Reveal on hover (pointer devices) or on keyboard focus. */
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-attachment-item:hover .cw-attachment-remove,
+  .cw-host .cw-attachment-item:focus-within .cw-attachment-remove {
+    opacity: 1;
+  }
+}
+
+.cw-host .cw-attachment-remove:focus-visible {
+  opacity: 1;
+}
+
+/* Touch devices have no hover to reveal with — always show. */
+@media (hover: none), (pointer: coarse) {
+  .cw-host .cw-attachment-remove {
+    opacity: 1;
+  }
+}
+
+/* Forced-visible demo/state class. */
+.cw-host .cw-attachment-remove.cw-is-visible {
+  opacity: 1;
+}
+
+/* ================================================================
+   ATTACHMENT ERROR — spec §4 (AttachmentError)
+   bg + border #ffcdd2, radius var(--border-radius, 8px),
+   pad 8px 12px, text 13px/18px #000, dismiss >= 24x24 with 12x12 svg.
+   (This surface uses the pink #ffcdd2 pair, NOT either alert red —
+   see §3 for where #FE1A20 / #d4240d belong.)
+   ================================================================ */
+.cw-host .cw-attachment-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;                        /* inferred: spec names no gap */
+  background: #ffcdd2;
+  border: 1px solid #ffcdd2;
+  border-radius: var(--border-radius, 8px);
+  padding: 8px 12px;
+  color: #000000;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.cw-host .cw-attachment-error-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cw-host .cw-attachment-error-dismiss {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  min-width: var(--cw-min-target, 24px);
+  min-height: var(--cw-min-target, 24px);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cw-host .cw-attachment-error-dismiss > .cw-icon {
+  width: 12px;
+  height: 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-attachment-error-dismiss:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* ================================================================
+   END MESSAGE — spec §4 (EndMessage)
+   White, #666666 14px/20px centered, padding 16px 24px 24px.
+   ================================================================ */
+.cw-host .cw-end-message {
+  background: #ffffff;
+  color: #666666;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
+  padding: 16px 24px 24px;
+  margin: 0;
+}
+
+/* ================================================================
+   PRIVACY DISCLAIMER — spec §4 (PrivacyDisclaimer)
+   #484848 14px/20px, letter-spacing .2px, centered, padding 16px,
+   margin-bottom 8px, and a LOCAL --link-color override to #484848
+   (the global default is #1a0dab — see §1).
+   ================================================================ */
+.cw-host .cw-privacy-disclaimer {
+  --link-color: #484848;
+  color: #484848;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.2px;
+  text-align: center;
+  padding: 16px;
+  margin: 0 0 8px;
+}
+
+.cw-host .cw-privacy-disclaimer a {
+  color: var(--link-color, #484848);
+  text-decoration: underline;
+}
+
+/* ================================================================
+   POWERED BY GLADLY — spec §4 (PoweredByGladly)
+   Centered link #484848 12px/20px w400 ls .2px, margin-top 8px,
+   hover opacity .8 + underline.
+   ================================================================ */
+.cw-host .cw-powered-by {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.cw-host .cw-powered-by-link {
+  color: #484848;
+  font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-powered-by-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+}
+
+/* ================================================================
+   SCROLL TO BOTTOM — spec §4 (ScrollToBottomButton)
+   36x36 white circle (radius var(--border-radius, 50%)), border
+   rgba(0,0,0,0.12), shadow 0 0 4px rgba(0,0,0,0.1), left 50%,
+   bottom 32px, hover fills accent + icon takes the derived icon
+   color, show/hide opacity + visibility .15s. Icon: ChevronDown.
+   Base foreground is deliberately left to inherit — the source
+   names no idle icon color, only the hover pair.
+   ================================================================ */
+.cw-host .cw-scroll-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--border-radius, 50%);
+  background-color: #ffffff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease,
+              background-color 0.15s ease, color 0.15s ease;
+}
+
+.cw-host .cw-scroll-btn.cw-is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-scroll-btn:hover:not(:disabled) {
+    background-color: var(--cw-accent, var(--color-chat-launcher, #8c69f0));
+    color: var(--cw-accent-icon, var(--color-chat-launcher-icon, #ffffff));
+  }
+}
+
+/* ================================================================
+   TOOLTIP — spec §4 (Tooltip)
+   Dark bubble #484848, white text 13px in the INTER STACK — the one
+   component in the library that does NOT use a themed font — line
+   height 162%, pad 5px 8px, radius 8px, nowrap, drop-shadow
+   0 1px 0 rgba(0,0,0,0.25), 6px CSS-triangle arrow, 8px offset,
+   z-index 10001, fade .15s. Four placements: above / below /
+   left / right.
+   ================================================================ */
+.cw-host .cw-tooltip-host {
+  position: relative;
+  display: inline-flex;
+}
+
+.cw-host .cw-tooltip {
+  position: absolute;
+  z-index: 10001;
+  background: #484848;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 162%;
+  padding: 5px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+/* Arrow — 6px CSS triangle, colored per placement below. */
+.cw-host .cw-tooltip::after {
+  content: '';
+  position: absolute;
+  border: 6px solid transparent;
+}
+
+/* Reveal: hover/focus on the host, or the explicit state class. */
+@media (hover: hover) and (pointer: fine) {
+  .cw-host .cw-tooltip-host:hover > .cw-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.cw-host .cw-tooltip-host:focus-visible > .cw-tooltip,
+.cw-host .cw-tooltip-host:focus-within > .cw-tooltip,
+.cw-host .cw-tooltip.cw-is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ---- ABOVE — bubble over the anchor, arrow pointing down -------- */
+.cw-host .cw-tooltip-above {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cw-host .cw-tooltip-above::after {
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-top-color: #484848;
+}
+
+/* ---- BELOW — bubble under the anchor, arrow pointing up --------- */
+.cw-host .cw-tooltip-below {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cw-host .cw-tooltip-below::after {
+  bottom: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-bottom-color: #484848;
+}
+
+/* ---- LEFT — bubble left of the anchor, arrow pointing right ----- */
+.cw-host .cw-tooltip-left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cw-host .cw-tooltip-left::after {
+  left: 100%;
+  top: 50%;
+  margin-top: -6px;
+  border-left-color: #484848;
+}
+
+/* ---- RIGHT — bubble right of the anchor, arrow pointing left ---- */
+.cw-host .cw-tooltip-right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cw-host .cw-tooltip-right::after {
+  right: 100%;
+  top: 50%;
+  margin-top: -6px;
+  border-right-color: #484848;
+}
+
+/* ================================================================
+   REDUCED MOTION — spec §9
+   Everything animated in this file collapses to an instant state
+   change. Visibility toggles keep working; only the tweening stops.
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .cw-host .cw-header-btn,
+  .cw-host .cw-composer-pill,
+  .cw-host .cw-attach-btn,
+  .cw-host .cw-send-btn,
+  .cw-host .cw-quick-reply,
+  .cw-host .cw-attachment-remove,
+  .cw-host .cw-attachment-error-dismiss,
+  .cw-host .cw-powered-by-link,
+  .cw-host .cw-scroll-btn,
+  .cw-host .cw-tooltip {
+    transition: none;
+  }
+}

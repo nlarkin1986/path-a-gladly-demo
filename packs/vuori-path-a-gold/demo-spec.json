@@ -1,0 +1,91 @@
+{
+  "prospect": {
+    "name": "Vuori",
+    "domain": "vuoriclothing.com",
+    "accent": "green"
+  },
+  "header": {
+    "title": "Vuori",
+    "subtitle": "AI shopping associate"
+  },
+  "turns": [
+    {
+      "i": 1,
+      "role": "agent",
+      "text": "You're on Home — I can shop soft everyday bottoms with you, or help with shipping and returns.",
+      "beat": "arrive"
+    },
+    {
+      "i": 2,
+      "role": "shopper",
+      "text": "I need soft everyday joggers under $120.",
+      "beat": "product_q"
+    },
+    {
+      "i": 3,
+      "role": "agent",
+      "text": "These three stay soft for everyday wear and sit under your budget — Performance Jogger is the closest everyday fit.",
+      "beat": "compare"
+    },
+    {
+      "i": 4,
+      "role": "shopper",
+      "text": "Do you have the Performance Jogger in navy?",
+      "beat": "refine"
+    },
+    {
+      "i": 5,
+      "role": "agent",
+      "text": "Navy isn't available on the women's Performance Jogger right now. Black Heather is in stock — same soft everyday fit. I've opened that PDP and can highlight color/size on the page.",
+      "beat": "refine"
+    },
+    {
+      "i": 6,
+      "role": "shopper",
+      "text": "What's shipping to Chicago, and can I return sale items?",
+      "beat": "policy"
+    },
+    {
+      "i": 7,
+      "role": "agent",
+      "text": "Standard shipping is free for orders over $75 to Chicago. Sale items are returnable unless marked Final Sale — from store policies.",
+      "beat": "policy"
+    },
+    {
+      "i": 8,
+      "role": "shopper",
+      "text": "Ok — I'll take the Black Heather.",
+      "beat": "soft_close"
+    },
+    {
+      "i": 9,
+      "role": "agent",
+      "text": "I can't add to your bag from chat — I've highlighted Add to Bag on the page. Confirm size there when you're ready. Want a person? I can hand off this thread warm — no email wall.",
+      "beat": "soft_close"
+    }
+  ],
+  "products": [
+    {
+      "name": "Performance Jogger | Black Heather",
+      "imageUrl": "film-assets/performance-jogger-black-heather.jpg",
+      "pageUrl": "https://www.vuoriclothing.com/products/womens-performance-jogger-black-heather",
+      "displayPrice": "$110"
+    },
+    {
+      "name": "Ponto Performance Pant 30\" | Charcoal Heather",
+      "imageUrl": "film-assets/ponto-performance-pant-charcoal-heather.jpg",
+      "pageUrl": "https://www.vuoriclothing.com/products/ponto-performance-pant-charcoal-heather",
+      "displayPrice": "$110"
+    },
+    {
+      "name": "Halo Essential Wideleg Pant - Short | Black Heather",
+      "imageUrl": "film-assets/halo-essential-wideleg-black-heather.jpg",
+      "pageUrl": "https://www.vuoriclothing.com/products/womens-halo-essential-wideleg-short-black-heather",
+      "displayPrice": "$118"
+    }
+  ],
+  "softClose": true,
+  "plate": {
+    "path": "packs/vuori-path-a-gold/plate/pdp.png"
+  }
+}

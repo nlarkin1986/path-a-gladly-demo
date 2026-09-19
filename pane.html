@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Path A — Gladly twin (data-driven)</title>
+<!--
+  Data-driven cw- twin. Loads demo-spec.json, renders turns + ProductList.
+  Fail-closed: no imageUrl → omit ProductCard.
+  Soft-close honesty when softClose=true (no Added / Pay UI).
+  Stock green header unless prospect.accent set.
+-->
+<style>
+  /* CSS hrefs injected after pack resolve — placeholders until then */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f5f5f5; }
+  #boot-err {
+    font: 14px/1.4 system-ui, sans-serif;
+    padding: 24px;
+    color: #b00020;
+    display: none;
+  }
+  /* Fill iframe/viewport — without this .cw-host/.cw-stage collapse to h=0 */
+  .cw-host {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .cw-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  .cw-stage .cw-container,
+  .cw-stage .cw-container.cw-is-panel,
+  .cw-stage .cw-container.cw-is-fullscreen {
+    position: absolute !important;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100% !important;
+    top: 0; right: 0; bottom: 0; left: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-radius: 24px 24px 0 0;
+    transform: none;
+  }
+  .cw-stage .cw-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* Film-only price under name — production ProductCard SoT is name+image */
+  .cw-stage .cw-product-card-content {
+    height: auto;
+    min-height: 36px;
+  }
+  .cw-stage .cw-product-card-price {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-secondary, 'Helvetica Neue', Helvetica, sans-serif);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 18px;
+    color: inherit;
+  }
+  .cw-stage .cw-product-list.hf-compare-2 {
+    gap: 16px;
+    margin: 8px 0 16px;
+  }
+  .cw-stage .cw-product-list.hf-compare-2 .cw-product-card {
+    flex: 1 1 calc(50% - 8px);
+  }
+  .cw-stage .cw-msg[hidden],
+  .cw-stage .cw-product-list[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="cw-icon-close" viewBox="0 0 22 2" fill="none">
+    <path d="M0.75 0.75L20.75 0.75" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/>
+  </symbol>
+  <symbol id="cw-icon-maximize" viewBox="0 0 20 18" fill="none">
+    <path d="M16.667 0C18.5078 0.000177676 20 1.51115 20 3.375V14.625C20 16.4889 18.5078 17.9998 16.667 18H3.33301C1.49221 17.9998 5.36848e-08 16.4889 0 14.625V3.375C0 1.51115 1.49221 0.000178198 3.33301 0H16.667ZM3.33301 1.125C2.10586 1.12518 1.11133 2.13247 1.11133 3.375V14.625L1.12305 14.8545C1.23666 15.9891 2.18243 16.8748 3.33301 16.875H16.667C17.8941 16.8748 18.8887 15.8675 18.8887 14.625V3.375C18.8887 2.13247 17.8941 1.12518 16.667 1.125H3.33301ZM16.5 2.57129C17.0522 2.57129 17.4999 3.01907 17.5 3.57129V14.4287C17.4999 14.9809 17.0522 15.4287 16.5 15.4287H3.5C2.94776 15.4287 2.50008 14.9809 2.5 14.4287V3.57129C2.50008 3.01907 2.94776 2.57129 3.5 2.57129H16.5Z" fill="currentColor"/>
+  </symbol>
+  <symbol id="cw-icon-sound-on" viewBox="0 -2.5 20 20" fill="none">
+    <path d="m4.428 9.96 3.885 3.952q.02.02.046.02c.036 0 .062-.03.062-.064V1.138a.063.063 0 0 0-.062-.063.06.06 0 0 0-.046.02L4.428 5.044c-.198.2-.464.314-.744.314H1.58a.533.533 0 0 0-.526.536V9.11c0 .295.236.536.526.536h2.105c.28 0 .546.114.744.315m-2.85-5.674h2.105L7.57.332C7.78.117 8.063 0 8.36 0c.615 0 1.115.509 1.115 1.135v12.73c0 .626-.5 1.135-1.115 1.135-.296 0-.58-.12-.79-.332l-3.885-3.951H1.58c-.873 0-1.58-.72-1.58-1.608V5.894c0-.887.707-1.607 1.579-1.607m10.842.643a3.23 3.23 0 0 1 1.263 2.572 3.23 3.23 0 0 1-1.263 2.572.52.52 0 0 1-.737-.107.54.54 0 0 1 .106-.75 2.15 2.15 0 0 0 .842-1.715c0-.7-.33-1.323-.842-1.715a.54.54 0 0 1-.106-.75.52.52 0 0 1 .737-.107m1.382-2.318a.517.517 0 0 1 .74-.07 6.47 6.47 0 0 1 2.296 4.96 6.47 6.47 0 0 1-2.296 4.96.52.52 0 0 1-.74-.074.54.54 0 0 1 .069-.754 5.37 5.37 0 0 0 1.918-4.132 5.37 5.37 0 0 0-1.915-4.133.54.54 0 0 1-.07-.753zM16.655.147A9.7 9.7 0 0 1 20 7.502c0 2.947-1.3 5.586-3.342 7.354a.523.523 0 0 1-.744-.06.543.543 0 0 1 .06-.757 8.62 8.62 0 0 0 2.973-6.537A8.62 8.62 0 0 0 15.974.965a.543.543 0 0 1-.06-.757.517.517 0 0 1 .744-.06z" fill="currentColor"/>
+  </symbol>
+  <symbol id="cw-icon-paper-plane" viewBox="0 0 16 16" fill="none">
+    <defs><clipPath id="cw-icon-paper-plane-clip"><rect fill="white" height="16" width="16"/></clipPath></defs>
+    <g clip-path="url(#cw-icon-paper-plane-clip)">
+      <path d="M0.1063 2.44693C-0.0812003 2.07193 -0.0155753 1.61881 0.271925 1.31256C0.559425 1.00631 1.0063 0.915685 1.3938 1.07818L15.3938 7.07818C15.7625 7.23443 16 7.59693 16 7.99693C16 8.39693 15.7625 8.75943 15.3938 8.91568L1.3938 14.9157C1.00942 15.0813 0.559425 14.9876 0.271925 14.6813C-0.0155753 14.3751 -0.0812003 13.9219 0.1063 13.5469L2.8813 8.00006L0.1063 2.44693ZM3.75005 8.50006L1.00005 14.0001L13.8344 8.50006H3.75005ZM13.8344 7.50006L1.00005 2.00006L3.75005 7.50006H13.8344Z" fill="currentColor"/>
+    </g>
+  </symbol>
+  <symbol id="cw-icon-paperclip" viewBox="0 0 16 17" fill="none">
+    <path d="M4.438 16.281c-1.032 0-2.094-.375-2.875-1.156C0 13.531 0 10.969 1.563 9.406L9.75 1.22C11 0 13 0 14.219 1.219c1.219 1.218 1.219 3.218 0 4.468L7.25 12.625a2.208 2.208 0 0 1-3.188 0 2.208 2.208 0 0 1 0-3.188l5.313-5.343a.423.423 0 0 1 .531 0l.188.187a.423.423 0 0 1 0 .532L4.75 10.125a1.344 1.344 0 0 0 0 1.813c.5.468 1.313.468 1.813 0l6.937-6.97c.844-.843.844-2.218 0-3.03-.813-.844-2.188-.844-3.031 0L2.28 10.124a3.018 3.018 0 0 0 0 4.281 3.018 3.018 0 0 0 4.281 0l6.813-6.812a.423.423 0 0 1 .531 0l.188.187a.423.423 0 0 1 0 .532L7.28 15.125a3.993 3.993 0 0 1-2.843 1.156Z" fill="currentColor"/>
+  </symbol>
+  <symbol id="cw-icon-chevron-down" viewBox="0 0 42 42" fill="none">
+    <path d="m13 17 8 8 8-8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/>
+  </symbol>
+</svg>
+
+<div id="boot-err" role="alert"></div>
+
+<div class="cw-host" id="screen" hidden>
+  <div class="cw-stage">
+    <div class="cw-container cw-is-panel" id="widget" role="dialog" aria-modal="true" aria-label="Chat">
+      <div class="cw-focus-sentinel" tabindex="0"></div>
+
+      <header class="cw-header" id="header">
+        <img class="cw-header-logo" id="header-logo" alt=""
+          src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23ffffff'/%3E%3Ctext x='20' y='27' font-family='Helvetica' font-size='18' font-weight='700' text-anchor='middle' fill='%23111111'%3EH%3C/text%3E%3C/svg%3E">
+        <div class="cw-header-titles" id="header-titles">
+          <p class="cw-header-heading" id="header-heading">Chat</p>
+          <p class="cw-header-subheading" id="header-subheading">AI shopping associate</p>
+        </div>
+        <div class="cw-header-actions" id="header-actions">
+          <button class="cw-header-btn" id="btn-sound" aria-label="Turn sound off" type="button">
+            <svg class="cw-icon cw-icon-sound-on" aria-hidden="true"><use href="#cw-icon-sound-on"></use></svg>
+          </button>
+          <button class="cw-header-btn cw-header-btn-mode" id="btn-mode" aria-label="Expand to fullscreen" type="button">
+            <svg class="cw-icon cw-icon-maximize" aria-hidden="true"><use href="#cw-icon-maximize"></use></svg>
+          </button>
+          <button class="cw-header-btn" id="btn-minimize" aria-label="Minimize chat" type="button">
+            <svg class="cw-icon cw-icon-close" aria-hidden="true"><use href="#cw-icon-close"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="cw-body" id="body">
+        <div class="cw-messages" id="messages"></div>
+        <button class="cw-scroll-btn" id="scroll-btn" aria-label="Scroll to latest" type="button" hidden>
+          <svg class="cw-icon cw-icon-chevron-down" aria-hidden="true"><use href="#cw-icon-chevron-down"></use></svg>
+        </button>
+      </div>
+
+      <footer class="cw-footer" id="footer">
+        <div class="cw-composer" id="composer">
+          <div class="cw-composer-pill" id="composer-pill">
+            <button class="cw-attach-btn" id="attach" aria-label="Attach a file" type="button">
+              <svg class="cw-icon cw-icon-paperclip" aria-hidden="true"><use href="#cw-icon-paperclip"></use></svg>
+            </button>
+            <textarea class="cw-composer-input" id="composer-input" rows="1" maxlength="1000" aria-label="Type a message" placeholder="Write a message…" readonly></textarea>
+            <button class="cw-send-btn" id="send" aria-label="Send" type="button">
+              <svg class="cw-icon cw-icon-paper-plane" aria-hidden="true"><use href="#cw-icon-paper-plane"></use></svg>
+            </button>
+          </div>
+        </div>
+        <div class="cw-powered-by" id="powered-by"><a class="cw-powered-by-link" href="#powered-by">Powered by Gladly</a></div>
+      </footer>
+
+      <div class="cw-focus-sentinel" tabindex="0"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var params = new URLSearchParams(location.search);
+  var pack = params.get("pack") || "huckberry-fatigue-firecrawl";
+  var specUrl = params.get("spec") || ("packs/" + pack + "/demo-spec.json");
+  var packBase = "packs/" + pack + "/";
+  var animate = params.get("animate") !== "0"; // default: sequential reveal
+
+  function fail(msg) {
+    var el = document.getElementById("boot-err");
+    el.style.display = "block";
+    el.textContent = msg;
+    console.error(msg);
+  }
+
+  function loadCss(href) {
+    return new Promise(function (resolve, reject) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.onload = function () { resolve(href); };
+      link.onerror = function () { reject(new Error("CSS failed: " + href)); };
+      document.head.appendChild(link);
+    });
+  }
+
+  function resolveAsset(url) {
+    if (!url) return "";
+    if (/^(https?:|data:|\/)/i.test(url)) return url;
+    // Pack-relative (film-assets/…) or demo-root-relative (packs/…)
+    if (url.indexOf("packs/") === 0) return url;
+    return packBase + url;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  /** Fail-closed ProductCard: no usable imageUrl → omit card. */
+  function renderProductCard(p) {
+    var img = (p.imageUrl || "").trim();
+    if (!img) return "";
+    var src = resolveAsset(img);
+    var name = escapeHtml(p.name || "");
+    var href = escapeHtml(p.pageUrl || "#");
+    // displayPrice is FILM-ONLY — production ProductCard SoT has no price
+    var price = (p.displayPrice && String(p.displayPrice).trim())
+      ? '<span class="cw-product-card-price">' + escapeHtml(p.displayPrice) + "</span>"
+      : "";
+    return (
+      '<a class="cw-product-card" href="' + href + '" target="_blank" rel="noopener">' +
+        '<div class="cw-product-card-media"><div class="cw-product-card-image-well">' +
+          '<img class="cw-product-card-image" alt="' + name + '" src="' + escapeHtml(src) + '">' +
+        "</div></div>" +
+        '<div class="cw-product-card-content">' +
+          '<span class="cw-product-card-name">' + name + "</span>" +
+          price +
+        "</div>" +
+      "</a>"
+    );
+  }
+
+  function renderProductList(products) {
+    if (!products || !products.length) return "";
+    var cards = products.map(renderProductCard).filter(Boolean);
+    if (!cards.length) return ""; // fail-closed: all cards omitted → no list
+    var cls = cards.length === 2 ? "cw-product-list hf-compare-2" : "cw-product-list";
+    return '<div class="' + cls + '" id="products-compare" aria-label="Products">' + cards.join("") + "</div>";
+  }
+
+  function applyAccent(prospect) {
+    var host = document.getElementById("screen");
+    var accent = (prospect && prospect.accent) ? String(prospect.accent).trim() : "";
+    if (!accent || accent === "green") {
+      host.setAttribute("data-accent", "green");
+      return;
+    }
+    if (accent === "purple") {
+      host.setAttribute("data-accent", "purple");
+      return;
+    }
+    // Custom CSS color → set header vars directly; keep green token as fallback base
+    host.setAttribute("data-accent", "green");
+    host.style.setProperty("--color-header-background", accent);
+    host.style.setProperty("--cw-accent", accent);
+  }
+
+  function setHeaderLogoLetter(title) {
+    var letter = (title || "G").charAt(0).toUpperCase();
+    var svg =
+      "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'>" +
+      "<rect width='40' height='40' rx='8' fill='%23ffffff'/>" +
+      "<text x='20' y='27' font-family='Helvetica' font-size='18' font-weight='700' text-anchor='middle' fill='%23111111'>" +
+      letter +
+      "</text></svg>";
+    document.getElementById("header-logo").src = "data:image/svg+xml;utf8," + svg;
+  }
+
+  function buildMessages(spec) {
+    var root = document.getElementById("messages");
+    root.innerHTML = "";
+    var turns = (spec.turns || []).slice().sort(function (a, b) { return a.i - b.i; });
+    var productsHtml = renderProductList(spec.products || []);
+    var productsInserted = false;
+    var softClose = !!spec.softClose;
+
+    turns.forEach(function (t) {
+      var roleClass = t.role === "shopper" ? "cw-msg-user" : "cw-msg-agent";
+      var beat = t.beat ? ' data-beat="' + escapeHtml(t.beat) + '"' : "";
+      var div = document.createElement("div");
+      div.className = "cw-msg " + roleClass;
+      div.id = "msg-" + t.i;
+      div.setAttribute("data-msg", String(t.i));
+      div.setAttribute("data-role", t.role);
+      if (t.beat) div.setAttribute("data-beat", t.beat);
+      if (animate) div.hidden = true;
+      div.innerHTML = '<p class="cw-msg-text">' + escapeHtml(t.text) + "</p>";
+      root.appendChild(div);
+
+      // Insert ProductList after compare agent turn (film lock: cards with compare beat)
+      if (!productsInserted && productsHtml && t.role === "agent" && t.beat === "compare") {
+        var wrap = document.createElement("div");
+        wrap.innerHTML = productsHtml;
+        var list = wrap.firstChild;
+        if (animate) list.hidden = true;
+        // Soft-close: never add ATC / Pay chrome beside cards
+        if (softClose) list.setAttribute("data-soft-close", "true");
+        root.appendChild(list);
+        productsInserted = true;
+      }
+    });
+
+    // If compare beat never fired but products exist, append at end
+    if (!productsInserted && productsHtml) {
+      var wrap2 = document.createElement("div");
+      wrap2.innerHTML = productsHtml;
+      var list2 = wrap2.firstChild;
+      if (animate) list2.hidden = true;
+      if (softClose) list2.setAttribute("data-soft-close", "true");
+      root.appendChild(list2);
+    }
+
+    // Soft-close honesty: never inject Added / cart / Pay UI
+    if (softClose) {
+      document.getElementById("widget").setAttribute("data-soft-close", "true");
+    }
+  }
+
+  function revealSequential() {
+    var root = document.getElementById("messages");
+    var kids = Array.prototype.slice.call(root.children);
+    var i = 0;
+    var typingEl = null;
+
+    function scrollBottom() {
+      var body = document.getElementById("body");
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function clearTyping() {
+      if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+      typingEl = null;
+    }
+
+    function showTyping() {
+      clearTyping();
+      typingEl = document.createElement("div");
+      typingEl.className = "cw-msg cw-msg-agent";
+      typingEl.setAttribute("aria-live", "polite");
+      typingEl.innerHTML =
+        '<div class="cw-typing" aria-hidden="true">' +
+        '<span class="cw-typing-dot"></span>' +
+        '<span class="cw-typing-dot"></span>' +
+        '<span class="cw-typing-dot"></span>' +
+        "</div>" +
+        '<span class="cw-sr-only" role="status">Agent is typing</span>';
+      root.appendChild(typingEl);
+      scrollBottom();
+    }
+
+    function next() {
+      if (i >= kids.length) {
+        clearTyping();
+        scrollBottom();
+        return;
+      }
+      var el = kids[i];
+      var isAgent = el.classList.contains("cw-msg-agent");
+      var isProducts = el.classList.contains("cw-product-list");
+      var delayAfter = isProducts ? 900 : isAgent ? 1100 : 650;
+
+      function reveal() {
+        clearTyping();
+        el.hidden = false;
+        scrollBottom();
+        i += 1;
+        setTimeout(next, delayAfter);
+      }
+
+      if (isAgent || isProducts) {
+        showTyping();
+        setTimeout(reveal, isProducts ? 700 : 850);
+      } else {
+        clearTyping();
+        reveal();
+      }
+    }
+    // Brief settle before first shopper bubble
+    setTimeout(next, 400);
+  }
+
+  function mount(spec) {
+    document.title = (spec.header && spec.header.title ? spec.header.title : "Chat") + " — Gladly twin";
+    document.getElementById("header-heading").textContent =
+      (spec.header && spec.header.title) || (spec.prospect && spec.prospect.name) || "Chat";
+    document.getElementById("header-subheading").textContent =
+      (spec.header && spec.header.subtitle) || "AI shopping associate";
+    document.getElementById("widget").setAttribute(
+      "aria-label",
+      ((spec.prospect && spec.prospect.name) || "Chat") + " chat"
+    );
+    setHeaderLogoLetter(
+      (spec.header && spec.header.title) || (spec.prospect && spec.prospect.name) || "G"
+    );
+    applyAccent(spec.prospect);
+    buildMessages(spec);
+    document.getElementById("screen").hidden = false;
+    if (animate) revealSequential();
+    // Expose for parent / film tooling
+    window.__PATH_A_SPEC = spec;
+    window.__PATH_A_PACK = pack;
+  }
+
+  var cssBase = packBase + "chat-widget/";
+  Promise.all([
+    loadCss(cssBase + "chat-tokens.css"),
+    loadCss(cssBase + "chat-shell.css"),
+    loadCss(cssBase + "chat-chrome.css"),
+    loadCss(cssBase + "chat-messages.css")
+  ])
+    .then(function () {
+      return fetch(specUrl, { cache: "no-store" }).then(function (r) {
+        if (!r.ok) throw new Error("demo-spec fetch " + r.status + " for " + specUrl);
+        return r.json();
+      });
+    })
+    .then(mount)
+    .catch(function (err) {
+      fail("Path A pane failed: " + (err && err.message ? err.message : err));
+    });
+})();
+</script>
+</body>
+</html>
