@@ -24,6 +24,27 @@ Optional:
 | `/pane.html?pack=huckberry-fatigue` | Twin alone (no plate) |
 | `/pane.html?pack=huckberry-fatigue&animate=0` | Show all turns immediately |
 
+
+## Instant compile (`instant.html`)
+
+Warm pack + capability chips → client-side `demo-spec` → live Gladly twin. **No Firecrawl, no network scrape.**
+
+```bash
+# after local server or hosted deploy
+open /instant.html
+```
+
+1. Pick **Huckberry** or **Vuori** (warm packs already on disk).
+2. Toggle chips (Product discovery, Compare, Fit/refine, Social, Policy, Soft-close).
+3. Each flip runs `compileDemoSpec` in the browser, `postMessage`s the compiled spec into `pane.html?live=1`, and remounts progressive play — typically **&lt;50ms** compile (first pack JSON + images cached after load).
+
+Logic lives in `compile-spec.js` (`arrive` always kept; Compare off clears `products`; Soft-close off sets `softClose: false`).
+
+| URL | What |
+|-----|------|
+| `/instant.html` | Path A instant compile spike |
+| `/pane.html?live=1` | Twin accepts `{type:"path-a-mount", spec}` / `path-a-replay` from same-origin parent |
+
 ## Success criteria
 
 1. Full-bleed **site plate** visible (PDP or homepage screenshot).
@@ -42,7 +63,9 @@ path-a-demo/
 ├── PIPELINE.md               # agent roles (Firecrawl → Script → Screens)
 ├── README.md                 # this file
 ├── demo.html                 # plate + iframe twin
-├── pane.html                 # data-driven cw- twin
+├── instant.html              # warm pack + chips → live mount
+├── compile-spec.js           # client-side demo-spec filter
+├── pane.html                 # data-driven cw- twin (+ live postMessage)
 ├── demo-spec.json → packs/huckberry-fatigue/demo-spec.json
 └── packs/huckberry-fatigue/
     ├── demo-spec.json

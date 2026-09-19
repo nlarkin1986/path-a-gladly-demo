@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Path A · instant compile (warm pack)</title>
+<!--
+  Warm pack + capability chips → client-side demo-spec compile → pane live mount.
+  No Firecrawl. No network scrape. Progressive play stays on.
+-->
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --panel: #161616;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #8a8a8a;
+    --green: #009B00;
+    --green-dim: #007a00;
+    --chip-on: #009B00;
+    --chip-off: #2a2a2a;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  #app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+  }
+  #controls {
+    z-index: 70;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(14, 14, 14, 0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+  #controls .brand {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  #controls .brand span { color: var(--green); }
+  .company-select {
+    display: flex;
+    gap: 6px;
+  }
+  .company-select button {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: 600 12px/1.2 system-ui, sans-serif;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .company-select button[aria-pressed="true"] {
+    border-color: var(--green);
+    background: var(--green);
+    color: #fff;
+  }
+  .company-select button:hover { filter: brightness(1.08); }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .chips label.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--chip-off);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    color: var(--muted);
+  }
+  .chips label.chip:has(input:checked) {
+    border-color: var(--green);
+    background: rgba(0, 155, 0, 0.18);
+    color: #c8f0c8;
+  }
+  .chips label.chip input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  #compile-ms {
+    font-variant-numeric: tabular-nums;
+    color: #9fef9f;
+  }
+  #replay {
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font: 600 12px/1.2 system-ui, sans-serif;
+    background: var(--green);
+    color: #fff;
+    cursor: pointer;
+  }
+  #replay:hover { background: var(--green-dim); }
+  #stage {
+    position: relative;
+    min-height: 0;
+    background: #111;
+  }
+  #plate-wrap {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    background: #1a1a1a;
+  }
+  #plate {
+    display: block;
+    width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+  #plate.natural {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    object-fit: contain;
+    object-position: top center;
+  }
+  #twin-frame {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    width: 380px;
+    height: 640px;
+    max-height: calc(100% - 48px);
+    border: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(0, 0, 0, 0.08);
+    background: #fff;
+    z-index: 50;
+  }
+  #boot-err {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    z-index: 60;
+    max-width: 420px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #3b0a0a;
+    color: #ffb4b4;
+    font-size: 13px;
+    display: none;
+  }
+  @media (max-width: 720px) {
+    #controls { padding: 8px 10px; }
+    .meta { margin-left: 0; width: 100%; }
+    #twin-frame {
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: min(62%, 560px);
+      max-height: none;
+      border-radius: 16px 16px 0 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="controls">
+    <div class="brand">Path A · <span>instant compile</span> (warm pack)</div>
+    <div class="company-select" role="group" aria-label="Company pack">
+      <button type="button" id="btn-huckberry" data-pack="huckberry-fatigue-firecrawl" aria-pressed="false">Huckberry</button>
+      <button type="button" id="btn-vuori" data-pack="vuori-path-a-gold" aria-pressed="true">Vuori</button>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Capability chips">
+      <label class="chip"><input type="checkbox" data-chip="product_q" checked> Product discovery</label>
+      <label class="chip"><input type="checkbox" data-chip="compare" checked> Compare / ProductList</label>
+      <label class="chip"><input type="checkbox" data-chip="fit_refine" checked> Fit / refine</label>
+      <label class="chip"><input type="checkbox" data-chip="social" checked> Social proof</label>
+      <label class="chip"><input type="checkbox" data-chip="policy" checked> Policy</label>
+      <label class="chip"><input type="checkbox" data-chip="soft_close" checked> Soft-close</label>
+    </div>
+    <div class="meta">
+      <span id="compile-ms">compiled —</span>
+      <span id="pack-label"></span>
+      <button type="button" id="replay">Replay</button>
+    </div>
+  </header>
+
+  <div id="stage">
+    <div id="boot-err" role="alert"></div>
+    <div id="plate-wrap">
+      <img id="plate" alt="Site plate" src="" hidden>
+    </div>
+    <iframe
+      id="twin-frame"
+      title="Gladly Chat SDK twin"
+      src="about:blank"
+      allow="clipboard-write"
+    ></iframe>
+  </div>
+</div>
+
+<script src="compile-spec.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var PACKS = {
+    "huckberry-fatigue-firecrawl": { label: "Huckberry", id: "huckberry-fatigue-firecrawl" },
+    "vuori-path-a-gold": { label: "Vuori", id: "vuori-path-a-gold" }
+  };
+
+  var packCache = Object.create(null);
+  var currentPackId = "vuori-path-a-gold";
+  var iframeReady = false;
+  var pendingSpec = null;
+  var lastCompiled = null;
+
+  var frame = document.getElementById("twin-frame");
+  var plateImg = document.getElementById("plate");
+  var compileLabel = document.getElementById("compile-ms");
+  var packLabel = document.getElementById("pack-label");
+
+  function showErr(msg) {
+    var el = document.getElementById("boot-err");
+    el.style.display = "block";
+    el.textContent = msg;
+    console.error(msg);
+  }
+
+  function clearErr() {
+    var el = document.getElementById("boot-err");
+    el.style.display = "none";
+    el.textContent = "";
+  }
+
+  function chipState() {
+    var state = PathACompile.defaultChipState();
+    document.querySelectorAll("#chips input[data-chip]").forEach(function (inp) {
+      state[inp.getAttribute("data-chip")] = !!inp.checked;
+    });
+    return state;
+  }
+
+  function loadPack(packId) {
+    if (packCache[packId]) {
+      return Promise.resolve(packCache[packId]);
+    }
+    var url = "packs/" + packId + "/demo-spec.json";
+    return fetch(url, { cache: "force-cache" }).then(function (r) {
+      if (!r.ok) throw new Error("warm pack " + r.status + " @ " + url);
+      return r.json();
+    }).then(function (spec) {
+      spec.__pack = packId;
+      packCache[packId] = spec;
+      return spec;
+    });
+  }
+
+  function setPlate(spec) {
+    var path = (spec.plate && spec.plate.path) || "";
+    if (!path) {
+      plateImg.hidden = true;
+      return;
+    }
+    plateImg.onload = function () {
+      if (plateImg.naturalHeight > window.innerHeight * 1.05) {
+        plateImg.classList.add("natural");
+      } else {
+        plateImg.classList.remove("natural");
+      }
+      plateImg.hidden = false;
+    };
+    plateImg.onerror = function () {
+      showErr("Plate failed: " + path);
+    };
+    if (plateImg.getAttribute("src") === path) {
+      plateImg.hidden = false;
+      return;
+    }
+    plateImg.src = path;
+    plateImg.alt = ((spec.prospect && spec.prospect.name) || currentPackId) + " site plate";
+  }
+
+  function postMount(spec) {
+    if (!iframeReady || !frame.contentWindow) {
+      pendingSpec = spec;
+      return;
+    }
+    frame.contentWindow.postMessage(
+      { type: "path-a-mount", spec: spec },
+      location.origin
+    );
+  }
+
+  function compileAndMount() {
+    clearErr();
+    var t0 = performance.now();
+    return loadPack(currentPackId).then(function (base) {
+      var compiled = PathACompile.compileDemoSpec(base, chipState());
+      var ms = performance.now() - t0;
+      lastCompiled = compiled;
+      compileLabel.textContent = "compiled in " + ms.toFixed(1) + "ms";
+      packLabel.textContent = PACKS[currentPackId].label +
+        " · " + (compiled.turns || []).length + " turns" +
+        (compiled.products && compiled.products.length
+          ? " · " + compiled.products.length + " products"
+          : "");
+      setPlate(base);
+      document.title =
+        ((base.prospect && base.prospect.name) || "Path A") +
+        " — instant compile";
+      postMount(compiled);
+      window.__PATH_A_INSTANT = {
+        pack: currentPackId,
+        chips: chipState(),
+        spec: compiled,
+        compileMs: ms
+      };
+      return compiled;
+    }).catch(function (err) {
+      showErr("Compile/mount failed: " + (err && err.message ? err.message : err));
+    });
+  }
+
+  function selectCompany(packId) {
+    currentPackId = packId;
+    document.querySelectorAll(".company-select button").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-pack") === packId ? "true" : "false");
+    });
+    compileAndMount();
+  }
+
+  function bootIframe() {
+    iframeReady = false;
+    frame.onload = function () {
+      iframeReady = true;
+      if (pendingSpec) {
+        var s = pendingSpec;
+        pendingSpec = null;
+        postMount(s);
+      } else if (lastCompiled) {
+        postMount(lastCompiled);
+      }
+    };
+    // live=1: message mount; pack as CSS/asset fallback until first postMessage
+    frame.src =
+      "pane.html?live=1&pack=" +
+      encodeURIComponent(currentPackId) +
+      "&t=" +
+      Date.now();
+  }
+
+  document.querySelectorAll(".company-select button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      selectCompany(btn.getAttribute("data-pack"));
+    });
+  });
+
+  document.querySelectorAll("#chips input[data-chip]").forEach(function (inp) {
+    inp.addEventListener("change", function () {
+      compileAndMount();
+    });
+  });
+
+  document.getElementById("replay").addEventListener("click", function () {
+    if (iframeReady && frame.contentWindow) {
+      frame.contentWindow.postMessage({ type: "path-a-replay" }, location.origin);
+    } else if (lastCompiled) {
+      postMount(lastCompiled);
+    }
+  });
+
+  // Initial: Vuori warm pack, all chips on
+  bootIframe();
+  compileAndMount();
+})();
+</script>
+</body>
+</html>

@@ -167,6 +167,10 @@
   var specUrl = params.get("spec") || ("packs/" + pack + "/demo-spec.json");
   var packBase = "packs/" + pack + "/";
   var animate = params.get("animate") !== "0"; // default: sequential reveal
+  var live = params.get("live") === "1" || params.has("live");
+  var playGen = 0;
+  var currentSpec = null;
+  var cssReady = null;
 
   function fail(msg) {
     var el = document.getElementById("boot-err");
@@ -175,8 +179,20 @@
     console.error(msg);
   }
 
+  function clearBootErr() {
+    var el = document.getElementById("boot-err");
+    el.style.display = "none";
+    el.textContent = "";
+  }
+
   function loadCss(href) {
     return new Promise(function (resolve, reject) {
+      // Skip duplicate loads (live remounts / pack swaps)
+      var existing = document.querySelector('link[rel="stylesheet"][href="' + href + '"]');
+      if (existing) {
+        resolve(href);
+        return;
+      }
       var link = document.createElement("link");
       link.rel = "stylesheet";
       link.href = href;
@@ -186,12 +202,30 @@
     });
   }
 
+  function ensureCss(base) {
+    var cssBase = base + "chat-widget/";
+    return Promise.all([
+      loadCss(cssBase + "chat-tokens.css"),
+      loadCss(cssBase + "chat-shell.css"),
+      loadCss(cssBase + "chat-chrome.css"),
+      loadCss(cssBase + "chat-messages.css")
+    ]);
+  }
+
   function resolveAsset(url) {
     if (!url) return "";
     if (/^(https?:|data:|\/)/i.test(url)) return url;
     // Pack-relative (film-assets/…) or demo-root-relative (packs/…)
     if (url.indexOf("packs/") === 0) return url;
     return packBase + url;
+  }
+
+  function inferPackBase(spec) {
+    var path = (spec && spec.plate && spec.plate.path) || "";
+    var m = String(path).match(/^(packs\/[^/]+)\//);
+    if (m) return m[1] + "/";
+    if (spec && spec.__pack) return "packs/" + spec.__pack + "/";
+    return packBase;
   }
 
   function escapeHtml(s) {
@@ -237,6 +271,8 @@
   function applyAccent(prospect) {
     var host = document.getElementById("screen");
     var accent = (prospect && prospect.accent) ? String(prospect.accent).trim() : "";
+    host.style.removeProperty("--color-header-background");
+    host.style.removeProperty("--cw-accent");
     if (!accent || accent === "green") {
       host.setAttribute("data-accent", "green");
       return;
@@ -272,7 +308,6 @@
 
     turns.forEach(function (t) {
       var roleClass = t.role === "shopper" ? "cw-msg-user" : "cw-msg-agent";
-      var beat = t.beat ? ' data-beat="' + escapeHtml(t.beat) + '"' : "";
       var div = document.createElement("div");
       div.className = "cw-msg " + roleClass;
       div.id = "msg-" + t.i;
@@ -307,12 +342,16 @@
     }
 
     // Soft-close honesty: never inject Added / cart / Pay UI
+    var widget = document.getElementById("widget");
     if (softClose) {
-      document.getElementById("widget").setAttribute("data-soft-close", "true");
+      widget.setAttribute("data-soft-close", "true");
+    } else {
+      widget.removeAttribute("data-soft-close");
     }
   }
 
   function revealSequential() {
+    var gen = ++playGen;
     var root = document.getElementById("messages");
     var kids = Array.prototype.slice.call(root.children);
     var i = 0;
@@ -345,6 +384,10 @@
     }
 
     function next() {
+      if (gen !== playGen) {
+        clearTyping();
+        return;
+      }
       if (i >= kids.length) {
         clearTyping();
         scrollBottom();
@@ -356,6 +399,10 @@
       var delayAfter = isProducts ? 900 : isAgent ? 1100 : 650;
 
       function reveal() {
+        if (gen !== playGen) {
+          clearTyping();
+          return;
+        }
         clearTyping();
         el.hidden = false;
         scrollBottom();
@@ -376,6 +423,14 @@
   }
 
   function mount(spec) {
+    clearBootErr();
+    // Cancel any in-flight progressive reveal before rebuild
+    playGen += 1;
+
+    packBase = inferPackBase(spec);
+    var m = packBase.match(/^packs\/([^/]+)\//);
+    if (m) pack = m[1];
+
     document.title = (spec.header && spec.header.title ? spec.header.title : "Chat") + " — Gladly twin";
     document.getElementById("header-heading").textContent =
       (spec.header && spec.header.title) || (spec.prospect && spec.prospect.name) || "Chat";
@@ -391,29 +446,73 @@
     applyAccent(spec.prospect);
     buildMessages(spec);
     document.getElementById("screen").hidden = false;
+    currentSpec = spec;
     if (animate) revealSequential();
     // Expose for parent / film tooling
     window.__PATH_A_SPEC = spec;
     window.__PATH_A_PACK = pack;
   }
 
-  var cssBase = packBase + "chat-widget/";
-  Promise.all([
-    loadCss(cssBase + "chat-tokens.css"),
-    loadCss(cssBase + "chat-shell.css"),
-    loadCss(cssBase + "chat-chrome.css"),
-    loadCss(cssBase + "chat-messages.css")
-  ])
-    .then(function () {
+  function replay() {
+    if (!currentSpec) return;
+    mount(currentSpec);
+  }
+
+  function isAllowedMessage(event) {
+    if (event.source !== window.parent) return false;
+    // Same-origin parent only (empty origin for sandboxed about:blank is ok if source matches)
+    if (event.origin && event.origin !== location.origin && event.origin !== "null") {
+      return false;
+    }
+    return true;
+  }
+
+  function onParentMessage(event) {
+    if (!isAllowedMessage(event)) return;
+    var data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (data.type === "path-a-mount" && data.spec) {
+      var nextBase = inferPackBase(data.spec);
+      ensureCss(nextBase)
+        .then(function () { mount(data.spec); })
+        .catch(function (err) {
+          fail("Live mount CSS failed: " + (err && err.message ? err.message : err));
+        });
+      return;
+    }
+    if (data.type === "path-a-replay") {
+      replay();
+    }
+  }
+
+  // Always listen when live=1; also listen if embedded (harmless for standalone ?pack=)
+  if (live || window.parent !== window) {
+    window.addEventListener("message", onParentMessage);
+  }
+  // Expose for debugging
+  window.__PATH_A_MOUNT = mount;
+  window.__PATH_A_REPLAY = replay;
+
+  cssReady = ensureCss(packBase);
+
+  var bootPromise = cssReady;
+  // Fetch-based mount path (unchanged). With live=1 and no explicit pack override,
+  // still fetch default pack as fallback until parent posts path-a-mount.
+  if (!live || params.get("pack") || params.get("spec")) {
+    bootPromise = cssReady.then(function () {
       return fetch(specUrl, { cache: "no-store" }).then(function (r) {
         if (!r.ok) throw new Error("demo-spec fetch " + r.status + " for " + specUrl);
         return r.json();
       });
-    })
-    .then(mount)
-    .catch(function (err) {
-      fail("Path A pane failed: " + (err && err.message ? err.message : err));
-    });
+    }).then(mount);
+  } else {
+    // live=1 alone: wait for parent postMessage (CSS already loading)
+    bootPromise = cssReady;
+  }
+
+  bootPromise.catch(function (err) {
+    fail("Path A pane failed: " + (err && err.message ? err.message : err));
+  });
 })();
 </script>
 </body>
